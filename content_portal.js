@@ -6,6 +6,7 @@
   let lastHref = location.href;
   let lastAnalysisFingerprint = "";
   let autoDownloadTriggeredHref = null;
+  let autoDownloadTriggeredPageHref = null;
   let auroraDownloadMenuOpenedHref = null;
 
   function isPixeonPatientPage() {
@@ -133,8 +134,12 @@
 
     applyPulsingHalo(explicitLink, 10000);
 
-    if (autoDownloadTriggeredHref !== explicitLink.href) {
+    if (
+      autoDownloadTriggeredHref !== explicitLink.href
+      && autoDownloadTriggeredPageHref !== location.href
+    ) {
       autoDownloadTriggeredHref = explicitLink.href;
+      autoDownloadTriggeredPageHref = location.href;
       window.location.href = explicitLink.href;
       return true;
     }
@@ -380,6 +385,9 @@
   setInterval(() => {
     if (location.href !== lastHref) {
       lastHref = location.href;
+      autoDownloadTriggeredPageHref = null;
+      autoDownloadTriggeredHref = null;
+      auroraDownloadMenuOpenedHref = null;
       debouncedAnalyze();
     }
   }, URL_CHANGE_POLL_MS);
