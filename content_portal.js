@@ -63,7 +63,9 @@
     return Array.from(document.querySelectorAll("a[href]")).find((link) => {
       const text = (link.textContent || "").trim().toLowerCase();
       const href = link.getAttribute("href") || "";
-      return text.includes("baixar todas as séries - zip dcm")
+      const downloadName = (link.getAttribute("download") || "").trim().toLowerCase();
+      return downloadName === "exam_dicom.zip"
+        || text.includes("baixar todas as séries - zip dcm")
         || text.includes("baixar todas as series - zip dcm")
         || (href.includes("/package/") && href.includes("type=DICOM"));
     }) || null;
@@ -94,6 +96,23 @@
     if (href && autoDownloadTriggeredHref !== href) {
       autoDownloadTriggeredHref = href;
       window.location.href = href;
+      return true;
+    }
+
+    return false;
+  }
+
+  function handleDirectExamDicomDownload() {
+    const explicitLink = document.querySelector("a[download='exam_dicom.zip']");
+    if (!explicitLink || !explicitLink.href) {
+      return false;
+    }
+
+    applyPulsingHalo(explicitLink, 10000);
+
+    if (autoDownloadTriggeredHref !== explicitLink.href) {
+      autoDownloadTriggeredHref = explicitLink.href;
+      window.location.href = explicitLink.href;
       return true;
     }
 
@@ -133,6 +152,10 @@
 
     if (result.vendor?.id === "pixeonkorus") {
       guideUserToImageButton();
+    }
+
+    if (handleDirectExamDicomDownload()) {
+      return;
     }
 
     if (result.vendor?.id === "aurora-pacs") {
