@@ -1,7 +1,7 @@
 (function initPortalContentScript(globalScope) {
   const root = globalScope.WISMED;
   const { MESSAGE_TYPES, PORTAL_SCAN_DEBOUNCE_MS, URL_CHANGE_POLL_MS } = root.CONSTANTS;
-  const { collectVisibleText, findByText, highlightElement, debounce, safeQuery } = root.domUtils;
+  const { collectVisibleText, findByText, highlightElement, applyPulsingHalo, debounce, safeQuery } = root.domUtils;
 
   let lastHref = location.href;
   let lastAnalysisFingerprint = "";
@@ -16,6 +16,37 @@
       title: document.title,
       document
     };
+  }
+
+  function extractExamRows() {
+    const table = document.querySelector("#ctl00_ContentPlaceHolderConteudo_GV_Pacientes");
+    if (!table) {
+      return [];
+    }
+
+    const rows = Array.from(table.querySelectorAll("tr")).slice(1);
+    return rows.map((row, index) => {
+      const cells = row.querySelectorAll("td");
+      const imageButton = row.querySelector("input[title='Exame de Imagem']");
+      const dateText = cells[1]?.textContent?.trim() || null;
+      const descriptionText = cells[2]?.textContent?.trim() || null;
+      return {
+        rowIndex: index,
+        date: dateText,
+        description: descriptionText,
+        imageButtonName: imageButton?.getAttribute("name") || null,
+        imageButtonTitle: imageButton?.getAttribute("title") || null
+      };
+    }).filter((entry) => entry.date || entry.description);
+  }
+
+  function guideUserToImageButton() {
+    const imageButtons = Array.from(document.querySelectorAll("input[title='Exame de Imagem']"));
+    if (!imageButtons.length) {
+      return false;
+    }
+    imageButtons.forEach((button) => applyPulsingHalo(button));
+    return true;
   }
 
   async function analyzePage(reason = "automatic") {
@@ -43,9 +74,14 @@
         manualHint: vendorMatch.vendor.manualHint || null,
         actions: vendorMatch.vendor.actions
       } : null,
+      examRows: extractExamRows(),
       error,
       timestamp: new Date().toISOString()
     };
+
+    if (result.vendor?.id === "pixeonkorus") {
+      guideUserToImageButton();
+    }
 
     const fingerprint = JSON.stringify({
       pageUrl: result.pageUrl,
@@ -115,6 +151,13 @@
       if (!element) throw new Error(`Selector not found: ${action.selector}`);
       highlightElement(element);
       return { ok: true, detail: `Highlighted ${action.selector}.` };
+    }
+
+    if (action.type === "pulse_halo_selector") {
+      const elements = Array.from(document.querySelectorAll(action.selector));
+      if (!elements.length) throw new Error(`Selector not found: ${action.selector}`);
+      elements.forEach((element) => applyPulsingHalo(element, action.durationMs || 8000));
+      return { ok: true, detail: `Applied pulsing halo to ${elements.length} element(s).` };
     }
 
     if (action.type === "manual_only") {

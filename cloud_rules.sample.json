@@ -13,6 +13,39 @@
   },
   "vendors": [
     {
+      "id": "pixeonkorus",
+      "name": "Pixeon Korus",
+      "priority": 120,
+      "detect": {
+        "hostnameContains": [
+          "pixeonkorus",
+          "pixeon"
+        ],
+        "pathContains": [
+          "/Paciente.aspx"
+        ],
+        "textContainsAny": [
+          "Resultados On-Line",
+          "Exame de Imagem",
+          "PACIENTE:"
+        ],
+        "selectorExists": [
+          "img[alt='Pixeon']",
+          "#ctl00_ContentPlaceHolderConteudo_GV_Pacientes",
+          "input[title='Exame de Imagem']"
+        ],
+        "scriptSrcContains": []
+      },
+      "actions": [
+        {
+          "type": "pulse_halo_selector",
+          "selector": "input[title='Exame de Imagem']",
+          "durationMs": 10000
+        }
+      ],
+      "manualHint": "Tabela de exames encontrada. Use o botao de imagem destacado em vermelho."
+    },
+    {
       "id": "generic-download",
       "name": "Generic Download Portal",
       "priority": 40,

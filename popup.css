@@ -5,8 +5,8 @@
   --border: #d8c8b4;
   --text: #1f2937;
   --muted: #6b7280;
-  --accent: #0f766e;
-  --accent-2: #9a3412;
+  --accent: #2563eb;
+  --accent-2: #1d4ed8;
 }
 
 * {
@@ -18,7 +18,7 @@ body {
   min-width: 360px;
   font-family: "Segoe UI", Tahoma, sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(15, 118, 110, 0.14), transparent 35%),
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent 35%),
     linear-gradient(180deg, #f8f4ea 0%, #f2e7d5 100%);
   color: var(--text);
 }
@@ -51,7 +51,7 @@ h1 {
 .status-pill {
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.12);
+  background: rgba(37, 99, 235, 0.12);
   color: var(--accent);
   font-weight: 600;
   text-transform: uppercase;
@@ -97,14 +97,14 @@ button {
   border: 0;
   border-radius: 12px;
   padding: 10px 12px;
-  background: linear-gradient(135deg, var(--accent) 0%, #115e59 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
   color: white;
   cursor: pointer;
   font-weight: 600;
 }
 
 button.button--ghost {
-  background: linear-gradient(135deg, var(--accent-2) 0%, #7c2d12 100%);
+  background: linear-gradient(135deg, var(--accent-2) 0%, #1e40af 100%);
 }
 
 button:hover {

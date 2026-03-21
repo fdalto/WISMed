@@ -48,7 +48,7 @@
     },
     STATUS_COLORS: {
       idle: "#7a7a7a",
-      ready: "#1f9d55",
+      ready: "#2563eb",
       portal_detected: "#2563eb",
       vendor_detected: "#ca8a04",
       download_in_progress: "#ea580c",
@@ -68,6 +68,7 @@
       rulesCache: "rulesCache",
       lastRulesSyncAt: "lastRulesSyncAt",
       portalAnalysis: "portalAnalysis",
+      currentExamRows: "currentExamRows",
       currentTabInfo: "currentTabInfo",
       pendingUploadContext: "pendingUploadContext"
     },
@@ -82,6 +83,7 @@
       autoModeEnabled: false,
       debugMode: false,
       portalAnalysis: null,
+      currentExamRows: [],
       currentTabInfo: null,
       pendingUploadContext: null
     },

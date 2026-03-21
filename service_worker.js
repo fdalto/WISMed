@@ -50,6 +50,7 @@ importScripts(
         hostname: payload.hostname,
         title: payload.title
       },
+      currentExamRows: payload.examRows || [],
       rulesVersion: payload.rulesVersion || "unknown",
       lastError: payload.error || null,
       extensionStatus: payload.error
