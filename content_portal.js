@@ -79,13 +79,12 @@
   }
 
   function handleAuroraDownloadFlow() {
-    const trigger = findAuroraDownloadTrigger();
-    if (trigger) {
-      applyPulsingHalo(trigger, 10000);
-    }
-
     const explicitLink = findAuroraExplicitDicomLink();
     if (!explicitLink) {
+      const trigger = findAuroraDownloadTrigger();
+      if (trigger) {
+        applyPulsingHalo(trigger, 10000);
+      }
       return false;
     }
 
@@ -94,7 +93,7 @@
     const href = explicitLink.href;
     if (href && autoDownloadTriggeredHref !== href) {
       autoDownloadTriggeredHref = href;
-      explicitLink.click();
+      window.location.href = href;
       return true;
     }
 
