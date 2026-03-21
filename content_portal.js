@@ -8,6 +8,12 @@
   let autoDownloadTriggeredHref = null;
   let auroraDownloadMenuOpenedHref = null;
 
+  function isPixeonPatientPage() {
+    return /(^|\.)pixeonkorus\.com$/i.test(location.hostname)
+      && /^\/Paciente\.aspx$/i.test(location.pathname)
+      && new URLSearchParams(location.search).has("ad");
+  }
+
   function gatherContext() {
     const scriptSources = Array.from(document.scripts || []).map((script) => script.src).filter(Boolean);
     return {
@@ -78,6 +84,22 @@
       return false;
     }
     imageButtons.forEach((button) => applyPulsingHalo(button));
+    return true;
+  }
+
+  function guidePixeonPatientImageButtons() {
+    if (!isPixeonPatientPage()) {
+      return false;
+    }
+
+    const imageButtons = Array.from(
+      document.querySelectorAll("input[type='image'][title='Exame de Imagem']")
+    );
+    if (!imageButtons.length) {
+      return false;
+    }
+
+    imageButtons.forEach((button) => applyPulsingHalo(button, 12000));
     return true;
   }
 
@@ -185,6 +207,8 @@
     if (result.vendor?.id === "pixeonkorus") {
       guideUserToImageButton();
     }
+
+    guidePixeonPatientImageButtons();
 
     if (handleDirectExamDicomDownload()) {
       return;
