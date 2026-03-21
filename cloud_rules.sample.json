@@ -13,6 +13,41 @@
   },
   "vendors": [
     {
+      "id": "aurora-pacs",
+      "name": "Aurora PACS",
+      "priority": 140,
+      "detect": {
+        "hostnameContains": [
+          "pacs.cedirp.com.br"
+        ],
+        "pathContains": [
+          "/resource/"
+        ],
+        "textContainsAny": [
+          "Baixar",
+          "Galeria",
+          "Informações do Paciente",
+          "MAMOGRAFIA DIGITAL BILATERAL"
+        ],
+        "selectorExists": [
+          ".downloadToolsItem",
+          "a[download='exam_dicom.zip']",
+          ".styles__DropDownToolsWrapper-sc-152ee91-2"
+        ],
+        "scriptSrcContains": [
+          "main."
+        ]
+      },
+      "actions": [
+        {
+          "type": "pulse_halo_selector",
+          "selector": ".downloadToolsItem, a[download='exam_dicom.zip']",
+          "durationMs": 10000
+        }
+      ],
+      "manualHint": "Link explicito de download DICOM encontrado. O download pode ser iniciado automaticamente."
+    },
+    {
       "id": "pixeonkorus",
       "name": "Pixeon Korus",
       "priority": 120,

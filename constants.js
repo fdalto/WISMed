@@ -69,6 +69,7 @@
       lastRulesSyncAt: "lastRulesSyncAt",
       portalAnalysis: "portalAnalysis",
       currentExamRows: "currentExamRows",
+      currentDownloadLinks: "currentDownloadLinks",
       currentTabInfo: "currentTabInfo",
       pendingUploadContext: "pendingUploadContext"
     },
@@ -84,6 +85,7 @@
       debugMode: false,
       portalAnalysis: null,
       currentExamRows: [],
+      currentDownloadLinks: [],
       currentTabInfo: null,
       pendingUploadContext: null
     },

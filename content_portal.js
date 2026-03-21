@@ -5,6 +5,7 @@
 
   let lastHref = location.href;
   let lastAnalysisFingerprint = "";
+  let autoDownloadTriggeredHref = null;
 
   function gatherContext() {
     const scriptSources = Array.from(document.scripts || []).map((script) => script.src).filter(Boolean);
@@ -40,6 +41,34 @@
     }).filter((entry) => entry.date || entry.description);
   }
 
+  function extractDownloadLinks() {
+    return Array.from(document.querySelectorAll("a[href]"))
+      .map((link) => {
+        const text = (link.textContent || "").trim();
+        const href = link.getAttribute("href") || "";
+        return {
+          text,
+          href,
+          download: link.getAttribute("download") || null
+        };
+      })
+      .filter((entry) => entry.href.includes("/package/") || /baixar/i.test(entry.text));
+  }
+
+  function findAuroraDownloadTrigger() {
+    return document.querySelector(".downloadToolsItem") || null;
+  }
+
+  function findAuroraExplicitDicomLink() {
+    return Array.from(document.querySelectorAll("a[href]")).find((link) => {
+      const text = (link.textContent || "").trim().toLowerCase();
+      const href = link.getAttribute("href") || "";
+      return text.includes("baixar todas as séries - zip dcm")
+        || text.includes("baixar todas as series - zip dcm")
+        || (href.includes("/package/") && href.includes("type=DICOM"));
+    }) || null;
+  }
+
   function guideUserToImageButton() {
     const imageButtons = Array.from(document.querySelectorAll("input[title='Exame de Imagem']"));
     if (!imageButtons.length) {
@@ -47,6 +76,29 @@
     }
     imageButtons.forEach((button) => applyPulsingHalo(button));
     return true;
+  }
+
+  function handleAuroraDownloadFlow() {
+    const trigger = findAuroraDownloadTrigger();
+    if (trigger) {
+      applyPulsingHalo(trigger, 10000);
+    }
+
+    const explicitLink = findAuroraExplicitDicomLink();
+    if (!explicitLink) {
+      return false;
+    }
+
+    applyPulsingHalo(explicitLink, 10000);
+
+    const href = explicitLink.href;
+    if (href && autoDownloadTriggeredHref !== href) {
+      autoDownloadTriggeredHref = href;
+      explicitLink.click();
+      return true;
+    }
+
+    return false;
   }
 
   async function analyzePage(reason = "automatic") {
@@ -75,12 +127,17 @@
         actions: vendorMatch.vendor.actions
       } : null,
       examRows: extractExamRows(),
+      downloadLinks: extractDownloadLinks(),
       error,
       timestamp: new Date().toISOString()
     };
 
     if (result.vendor?.id === "pixeonkorus") {
       guideUserToImageButton();
+    }
+
+    if (result.vendor?.id === "aurora-pacs") {
+      handleAuroraDownloadFlow();
     }
 
     const fingerprint = JSON.stringify({
@@ -158,6 +215,13 @@
       if (!elements.length) throw new Error(`Selector not found: ${action.selector}`);
       elements.forEach((element) => applyPulsingHalo(element, action.durationMs || 8000));
       return { ok: true, detail: `Applied pulsing halo to ${elements.length} element(s).` };
+    }
+
+    if (action.type === "click_selector_all") {
+      const elements = Array.from(document.querySelectorAll(action.selector));
+      if (!elements.length) throw new Error(`Selector not found: ${action.selector}`);
+      elements.forEach((element) => element.click());
+      return { ok: true, detail: `Clicked ${elements.length} element(s).` };
     }
 
     if (action.type === "manual_only") {

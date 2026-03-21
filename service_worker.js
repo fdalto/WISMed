@@ -51,6 +51,7 @@ importScripts(
         title: payload.title
       },
       currentExamRows: payload.examRows || [],
+      currentDownloadLinks: payload.downloadLinks || [],
       rulesVersion: payload.rulesVersion || "unknown",
       lastError: payload.error || null,
       extensionStatus: payload.error
