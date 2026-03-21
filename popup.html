@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WISMed Upload Bridge</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="popup">
+    <header class="popup__header">
+      <div>
+        <p class="eyebrow">WISMed</p>
+        <h1>Upload Bridge</h1>
+      </div>
+      <span id="status-pill" class="status-pill">idle</span>
+    </header>
+
+    <section class="panel">
+      <p class="label">Upload URL</p>
+      <p id="upload-url">not set</p>
+      <p class="label">Domínio atual</p>
+      <p id="current-domain">unknown</p>
+      <p class="label">Fornecedor detectado</p>
+      <p id="vendor-name">none</p>
+    </section>
+
+    <section class="panel">
+      <p class="label">Versão das regras</p>
+      <p id="rules-version">unloaded</p>
+      <p class="label">Último download</p>
+      <p id="last-download">none</p>
+      <p class="label">Último erro</p>
+      <p id="last-error">none</p>
+    </section>
+
+    <section class="panel toggles">
+      <label>
+        <span>Automação</span>
+        <input id="auto-mode" type="checkbox">
+      </label>
+    </section>
+
+    <section class="actions">
+      <button id="reload-rules">Recarregar regras</button>
+      <button id="analyze-tab">Analisar página atual</button>
+      <button id="run-action">Executar ação detectada</button>
+      <button id="clear-state" class="button--ghost">Limpar estado</button>
+    </section>
+  </main>
+  <script src="constants.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "WISMed Upload Bridge",
+  "description": "Captura um uploadUrl no portal da empresa e auxilia a localizar, baixar e encaminhar exames em outros portais/PACS.",
+  "version": "0.1.0",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "downloads",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://*.minhaempresa.com/*",
+    "http://localhost/*",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "action": {
+    "default_title": "WISMed Upload Bridge",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.minhaempresa.com/*",
+        "http://localhost/*"
+      ],
+      "js": [
+        "constants.js",
+        "dom_utils.js",
+        "content_platform.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*/*",
+        "http://*/*"
+      ],
+      "js": [
+        "constants.js",
+        "dom_utils.js",
+        "rules_engine.js",
+        "content_portal.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
