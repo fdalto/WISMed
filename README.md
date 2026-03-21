@@ -37,7 +37,7 @@ O projeto foi estruturado para separar claramente:
 
 Ajuste [constants.js](/D:/WISMed/constants.js):
 
-- `COMPANY_HOST_PATTERNS`: hosts do portal da empresa
+- `COMPANY_HOST_PATTERNS`: hosts do portal da empresa. O projeto ja vem configurado com `wismedreview.lovable.app`
 - `REMOTE_RULES_URL`: endpoint HTTPS do JSON remoto
 - tempos de cache e debounce conforme a necessidade do ambiente
 

@@ -3,7 +3,7 @@
 
   root.CONSTANTS = {
     COMPANY_HOST_PATTERNS: [
-      "minhaempresa.com",
+      "wismedreview.lovable.app",
       "localhost"
     ],
     REMOTE_RULES_URL: "https://example.com/wismed-rules.json",
