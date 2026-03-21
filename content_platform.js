@@ -30,6 +30,29 @@
       return genericNode.getAttribute("data-upload-url") || genericNode.getAttribute("data-uploadurl");
     }
 
+    const labeledCards = Array.from(document.querySelectorAll("p, span, div")).filter((node) => {
+      const text = (node.textContent || "").trim().toLowerCase();
+      return text === "seu link de upload";
+    });
+
+    for (const label of labeledCards) {
+      const card = label.closest("div");
+      const codeNode = card?.querySelector("code");
+      const codeValue = codeNode?.textContent?.trim();
+      if (codeValue) {
+        return codeValue;
+      }
+    }
+
+    const codeCandidates = Array.from(document.querySelectorAll("code"))
+      .map((node) => node.textContent?.trim())
+      .filter(Boolean);
+
+    const matchingCode = codeCandidates.find((value) => /\/upload\/[a-z0-9-]+/i.test(value));
+    if (matchingCode) {
+      return matchingCode;
+    }
+
     const textMatch = document.body && document.body.innerText.match(/https?:\/\/[^\s"'<>]+\/upload\/[^\s"'<>]+/i);
     return textMatch ? textMatch[0] : null;
   }
