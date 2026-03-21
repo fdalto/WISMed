@@ -38,12 +38,10 @@ O projeto foi estruturado para separar claramente:
 Ajuste [constants.js](/D:/WISMed/constants.js):
 
 - `COMPANY_HOST_PATTERNS`: hosts do portal da empresa. O projeto ja vem configurado com `wismedreview.lovable.app`
-- `REMOTE_RULES_URL`: endpoint HTTPS do JSON remoto
+- `REMOTE_RULES_URL`: endpoint HTTPS do JSON remoto. O projeto ja vem apontando para `https://fdalto.github.io/WISMed/cloud_rules.sample.json`
 - tempos de cache e debounce conforme a necessidade do ambiente
 
 Se os PACS-alvo forem conhecidos, reduza os padroes em [manifest.json](/D:/WISMed/manifest.json) para remover `http://*/*` e `https://*/*` antes de distribuir a extensao.
-
-Enquanto `REMOTE_RULES_URL` estiver apontando para `example.com`, a extensao usa um conjunto minimo embutido de regras para nao falhar imediatamente durante os testes locais.
 
 ## Exemplo de JSON remoto
 

@@ -6,7 +6,7 @@
       "wismedreview.lovable.app",
       "localhost"
     ],
-    REMOTE_RULES_URL: "https://example.com/wismed-rules.json",
+    REMOTE_RULES_URL: "https://fdalto.github.io/WISMed/cloud_rules.sample.json",
     RULES_CACHE_TTL_MS: 15 * 60 * 1000,
     PORTAL_SCAN_DEBOUNCE_MS: 800,
     URL_CHANGE_POLL_MS: 1200,
