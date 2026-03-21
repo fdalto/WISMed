@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WISMed Review - Simulador</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5efe4;
+      --card: #fffaf3;
+      --border: #dbc8b0;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #0f766e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 30%),
+        linear-gradient(180deg, #f8f4eb 0%, #efe2cf 100%);
+      color: var(--text);
+    }
+
+    main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 48px 20px 72px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .hero h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 18px 45px rgba(90, 59, 24, 0.08);
+      margin-bottom: 18px;
+    }
+
+    .label {
+      margin: 0 0 10px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .upload-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    code {
+      flex: 1;
+      display: block;
+      min-width: 280px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #efe7da;
+      overflow-x: auto;
+      font-size: 0.85rem;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    ol {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    li + li {
+      margin-top: 10px;
+    }
+
+    .status {
+      color: var(--muted);
+      text-align: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>Envie suas imagens</h1>
+      <p>Simulador local da tela da empresa para testar a captura do link de upload pela extensão.</p>
+    </section>
+
+    <section class="card">
+      <p class="label">Seu link de upload</p>
+      <div class="upload-row">
+        <code id="upload-url-code">https://api.laudoreview.com.br/upload/1adcf418-2c7d-402f-98a4-a9569acec365</code>
+        <button id="copy-button" type="button">Copiar</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <p class="label">Como enviar</p>
+      <ol>
+        <li>Mantenha esta página aberta. A extensão deve capturar o link automaticamente.</li>
+        <li>Abra o portal do paciente em outra aba.</li>
+        <li>Use o popup para analisar e executar a ação detectada.</li>
+        <li>Acompanhe o estado pelo badge e pelo popup.</li>
+      </ol>
+    </section>
+
+    <p class="status" id="copy-status">Aguardando teste.</p>
+  </main>
+
+  <script>
+    const copyButton = document.getElementById("copy-button");
+    const uploadCode = document.getElementById("upload-url-code");
+    const status = document.getElementById("copy-status");
+
+    copyButton.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(uploadCode.textContent.trim());
+        status.textContent = "Link copiado para a area de transferencia.";
+      } catch (error) {
+        status.textContent = `Falha ao copiar: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>

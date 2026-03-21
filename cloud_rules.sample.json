@@ -1,0 +1,110 @@
+{
+  "configVersion": "2026-03-21",
+  "global": {
+    "keywords": [
+      "dicom",
+      "download",
+      "baixar",
+      "zip",
+      "imagens",
+      "export",
+      "estudo"
+    ]
+  },
+  "vendors": [
+    {
+      "id": "generic-download",
+      "name": "Generic Download Portal",
+      "priority": 40,
+      "detect": {
+        "hostnameContains": [
+          "localhost",
+          "127.0.0.1"
+        ],
+        "pathContains": [
+          "/portal",
+          "/viewer"
+        ],
+        "textContainsAny": [
+          "download",
+          "baixar",
+          "dicom",
+          "exportar"
+        ],
+        "selectorExists": [
+          "#downloadExam",
+          "button[data-test='download-exam']",
+          "a[download]"
+        ],
+        "scriptSrcContains": []
+      },
+      "actions": [
+        {
+          "type": "highlight_selector",
+          "selector": "#downloadExam"
+        },
+        {
+          "type": "click_selector",
+          "selector": "#downloadExam",
+          "waitMs": 1200
+        }
+      ],
+      "manualHint": "Portal generico com botao de download identificado."
+    },
+    {
+      "id": "animate",
+      "name": "Animate",
+      "priority": 100,
+      "detect": {
+        "hostnameContains": [
+          "animate"
+        ],
+        "pathContains": [
+          "/viewer",
+          "/exam"
+        ],
+        "textContainsAny": [
+          "animate",
+          "dicom"
+        ],
+        "selectorExists": [
+          "#btnDownloadExam"
+        ],
+        "scriptSrcContains": [
+          "animate"
+        ]
+      },
+      "actions": [
+        {
+          "type": "click_selector",
+          "selector": "#btnDownloadExam",
+          "waitMs": 1000
+        }
+      ],
+      "manualHint": "Fornecedor Animate detectado."
+    },
+    {
+      "id": "manual-review",
+      "name": "Manual Review Portal",
+      "priority": 15,
+      "detect": {
+        "hostnameContains": [],
+        "pathContains": [],
+        "textContainsAny": [
+          "imagens",
+          "download do exame",
+          "exportar estudo"
+        ],
+        "selectorExists": [],
+        "scriptSrcContains": []
+      },
+      "actions": [
+        {
+          "type": "manual_only",
+          "message": "Fornecedor parcialmente reconhecido. Revise o menu de exportacao."
+        }
+      ],
+      "manualHint": "Ha sinais de portal conhecido, mas a acao ainda depende de revisao manual."
+    }
+  ]
+}
