@@ -6,6 +6,7 @@
   let lastHref = location.href;
   let lastAnalysisFingerprint = "";
   let autoDownloadTriggeredHref = null;
+  let auroraDownloadMenuOpenedHref = null;
 
   function gatherContext() {
     const scriptSources = Array.from(document.scripts || []).map((script) => script.src).filter(Boolean);
@@ -119,6 +120,37 @@
     return false;
   }
 
+  function handleAuroraAutoOpenAndDownload() {
+    const explicitLink = document.querySelector("a[download='exam_dicom.zip']");
+    if (explicitLink?.href) {
+      return handleDirectExamDicomDownload();
+    }
+
+    const trigger = findAuroraDownloadTrigger();
+    if (!trigger) {
+      return false;
+    }
+
+    applyPulsingHalo(trigger, 10000);
+
+    if (auroraDownloadMenuOpenedHref !== location.href) {
+      auroraDownloadMenuOpenedHref = location.href;
+      trigger.click();
+      setTimeout(() => {
+        handleDirectExamDicomDownload();
+      }, 400);
+      setTimeout(() => {
+        handleDirectExamDicomDownload();
+      }, 1000);
+      setTimeout(() => {
+        handleDirectExamDicomDownload();
+      }, 2000);
+      return true;
+    }
+
+    return false;
+  }
+
   async function analyzePage(reason = "automatic") {
     let rules = null;
     let vendorMatch = null;
@@ -159,6 +191,9 @@
     }
 
     if (result.vendor?.id === "aurora-pacs") {
+      if (handleAuroraAutoOpenAndDownload()) {
+        return;
+      }
       handleAuroraDownloadFlow();
     }
 
