@@ -47,6 +47,19 @@
         "zip",
         "pacote",
         "arquivo"
+      ],
+      "clickSelectors": [
+        "[data-cy='dropDownToolsWrapper']",
+        ".styles__DropDownToolsWrapper-sc-152ee91-2",
+        "[class*='DropDownToolsWrapper']",
+        "button",
+        "[role='button']"
+      ],
+      "dropdownPresenceSelectors": [
+        "[data-cy='dropDownToolsWrapper']",
+        ".styles__DropDownToolsWrapper-sc-152ee91-2",
+        "[class*='DropDownToolsWrapper']",
+        "[aria-haspopup='menu']"
       ]
     },
     "genericDownload": {

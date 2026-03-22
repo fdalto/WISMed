@@ -12,13 +12,25 @@
   let lastAnalysisFingerprint = "";
   let autoDownloadTriggeredHref = null;
   let autoDownloadTriggeredPageHref = null;
-  let auroraDownloadMenuOpenedHref = null;
   let genericPriorityTriggeredPageHref = null;
-  let genericDropdownOpenedPageHref = null;
   let extensionActive = true;
   let autoDownloadCooldownUntil = 0;
+  let extensionContextInvalidated = false;
 
   const AUTO_DOWNLOAD_COOLDOWN_MS = 4000;
+
+  function isExtensionContextInvalidatedError(error) {
+    const message = String(error?.message || error || "").toLowerCase();
+    return message.includes("extension context invalidated");
+  }
+
+  function markContextInvalidated(error) {
+    if (isExtensionContextInvalidatedError(error)) {
+      extensionContextInvalidated = true;
+      return true;
+    }
+    return false;
+  }
 
   function refreshActiveState() {
     chrome.storage.local.get([STORAGE_KEYS.autoModeEnabled], (stored) => {
@@ -32,6 +44,42 @@
 
   function lockAutoDownload() {
     autoDownloadCooldownUntil = Date.now() + AUTO_DOWNLOAD_COOLDOWN_MS;
+  }
+
+  function attemptClick(element) {
+    if (!element) {
+      return false;
+    }
+
+    const events = ["pointerdown", "mousedown", "mouseup", "click"];
+    for (const eventName of events) {
+      try {
+        element.dispatchEvent(new MouseEvent(eventName, { bubbles: true, cancelable: true, view: window }));
+      } catch {
+        continue;
+      }
+    }
+
+    try {
+      element.click();
+    } catch {
+      return false;
+    }
+    return true;
+  }
+
+  function pickFirstBySelectors(base, selectors) {
+    for (const selector of selectors || []) {
+      try {
+        const found = base.querySelector(selector);
+        if (found) {
+          return found;
+        }
+      } catch {
+        continue;
+      }
+    }
+    return null;
   }
 
   function isPixeonPatientPage() {
@@ -197,25 +245,30 @@
       return false;
     }
 
-    applyPulsingHalo(trigger, 10000);
+    const clickTarget = pickFirstBySelectors(trigger, [
+      "[data-cy='dropDownToolsWrapper']",
+      "[class*='DropDownToolsWrapper']",
+      "button",
+      "[role='button']"
+    ]) || trigger;
 
-    if (auroraDownloadMenuOpenedHref !== location.href) {
-      auroraDownloadMenuOpenedHref = location.href;
-      lockAutoDownload();
-      trigger.click();
-      setTimeout(() => {
-        handleDirectExamDicomDownload();
-      }, 400);
-      setTimeout(() => {
-        handleDirectExamDicomDownload();
-      }, 1000);
-      setTimeout(() => {
-        handleDirectExamDicomDownload();
-      }, 2000);
-      return true;
+    applyPulsingHalo(clickTarget, 10000);
+
+    const clicked = attemptClick(clickTarget);
+    if (!clicked) {
+      return false;
     }
-
-    return false;
+    lockAutoDownload();
+    setTimeout(() => {
+      handleDirectExamDicomDownload();
+    }, 400);
+    setTimeout(() => {
+      handleDirectExamDicomDownload();
+    }, 1000);
+    setTimeout(() => {
+      handleDirectExamDicomDownload();
+    }, 2000);
+    return true;
   }
 
   function normalizeText(value) {
@@ -314,12 +367,11 @@
       return false;
     }
 
-    genericPriorityTriggeredPageHref = location.href;
-    lockAutoDownload();
     applyPulsingHalo(best.element, 6000);
-
-    if (typeof best.element.click === "function") {
-      best.element.click();
+    const clicked = attemptClick(best.element);
+    if (clicked) {
+      genericPriorityTriggeredPageHref = location.href;
+      lockAutoDownload();
       return true;
     }
     return false;
@@ -328,26 +380,32 @@
   function getGenericDropdownConfig(rules) {
     const triggerSelectors = rules?.global?.genericDropdown?.triggerSelectors;
     const triggerTexts = rules?.global?.genericDropdown?.triggerTexts;
+    const clickSelectors = rules?.global?.genericDropdown?.clickSelectors;
+    const dropdownPresenceSelectors = rules?.global?.genericDropdown?.dropdownPresenceSelectors;
     return {
       triggerSelectors: Array.isArray(triggerSelectors) && triggerSelectors.length
         ? triggerSelectors
         : [".downloadToolsItem", "[data-cy='dropDownToolsWrapper']", "[class*='DropDownToolsWrapper']"],
       triggerTexts: Array.isArray(triggerTexts) && triggerTexts.length
         ? triggerTexts
-        : ["baixar", "download", "export", "dicom", "zip"]
+        : ["baixar", "download", "export", "dicom", "zip"],
+      clickSelectors: Array.isArray(clickSelectors) && clickSelectors.length
+        ? clickSelectors
+        : ["[data-cy='dropDownToolsWrapper']", "[class*='DropDownToolsWrapper']", "button", "[role='button']"],
+      dropdownPresenceSelectors: Array.isArray(dropdownPresenceSelectors) && dropdownPresenceSelectors.length
+        ? dropdownPresenceSelectors
+        : ["[data-cy='dropDownToolsWrapper']", "[class*='DropDownToolsWrapper']", "[aria-haspopup='menu']"]
     };
   }
 
   function findGenericDropdownTrigger(rules) {
-    const { triggerSelectors, triggerTexts } = getGenericDropdownConfig(rules);
+    const { triggerSelectors, triggerTexts, dropdownPresenceSelectors } = getGenericDropdownConfig(rules);
 
     const candidates = Array.from(document.querySelectorAll(triggerSelectors.join(",")));
     return candidates.find((element) => {
       const target = element.closest(".downloadToolsItem") || element;
       const text = normalizeText(target.innerText || target.textContent);
-      const hasDropdown = Boolean(
-        target.querySelector("[data-cy='dropDownToolsWrapper'], [class*='DropDownToolsWrapper']")
-      );
+      const hasDropdown = Boolean(pickFirstBySelectors(target, dropdownPresenceSelectors));
       return hasDropdown && triggerTexts.some((term) => text.includes(normalizeText(term)));
     }) || null;
   }
@@ -357,25 +415,26 @@
       return false;
     }
 
-    if (genericDropdownOpenedPageHref === location.href) {
-      return false;
-    }
-
     const dropdownElement = findGenericDropdownTrigger(rules);
     if (!dropdownElement) {
       return false;
     }
 
     const target = dropdownElement.closest(".downloadToolsItem") || dropdownElement;
-    applyPulsingHalo(target, 6000);
-    genericDropdownOpenedPageHref = location.href;
+    const { clickSelectors } = getGenericDropdownConfig(rules);
+    const clickTarget = pickFirstBySelectors(target, clickSelectors) || target;
+
+    applyPulsingHalo(clickTarget, 6000);
+    const clicked = attemptClick(clickTarget);
+    if (!clicked) {
+      return false;
+    }
     lockAutoDownload();
-    target.click();
     return true;
   }
 
   async function analyzePage(reason = "automatic") {
-    if (!extensionActive) {
+    if (!extensionActive || extensionContextInvalidated) {
       return;
     }
 
@@ -387,6 +446,9 @@
       rules = await root.rulesEngine.loadRemoteRules(false);
       vendorMatch = root.rulesEngine.detectVendor(rules, gatherContext());
     } catch (scanError) {
+      if (markContextInvalidated(scanError)) {
+        return;
+      }
       error = scanError.message;
     }
 
@@ -415,22 +477,20 @@
 
     guidePixeonPatientImageButtons();
 
-    if (handleDirectExamDicomDownload()) {
-      return;
-    }
+    const directDownloadTriggered = handleDirectExamDicomDownload();
+    let auroraTriggered = false;
 
     if (result.vendor?.id === "aurora-pacs") {
-      if (handleAuroraAutoOpenAndDownload()) {
-        return;
+      auroraTriggered = handleAuroraAutoOpenAndDownload();
+      if (!auroraTriggered) {
+        handleAuroraDownloadFlow();
       }
-      handleAuroraDownloadFlow();
     }
 
-    if (handleGenericDropdownOpen(rules)) {
-      return;
-    }
+    const genericDropdownTriggered = handleGenericDropdownOpen(rules);
+    const genericPriorityTriggered = handleGenericPriorityDownload(rules);
 
-    if (handleGenericPriorityDownload(rules)) {
+    if (directDownloadTriggered || auroraTriggered || genericDropdownTriggered || genericPriorityTriggered) {
       return;
     }
 
@@ -444,10 +504,16 @@
     }
     lastAnalysisFingerprint = fingerprint;
 
-    chrome.runtime.sendMessage({
-      type: MESSAGE_TYPES.PORTAL_ANALYSIS_RESULT,
-      payload: result
-    }).catch(() => {});
+    try {
+      chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.PORTAL_ANALYSIS_RESULT,
+        payload: result
+      }).catch((sendError) => {
+        markContextInvalidated(sendError);
+      });
+    } catch (sendError) {
+      markContextInvalidated(sendError);
+    }
   }
 
   async function executeAction(action) {
@@ -610,9 +676,7 @@
       lastHref = location.href;
       autoDownloadTriggeredPageHref = null;
       autoDownloadTriggeredHref = null;
-      auroraDownloadMenuOpenedHref = null;
       genericPriorityTriggeredPageHref = null;
-      genericDropdownOpenedPageHref = null;
       debouncedAnalyze();
     }
   }, URL_CHANGE_POLL_MS);

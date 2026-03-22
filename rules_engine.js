@@ -4,6 +4,7 @@
     STORAGE_KEYS,
     RULES_CACHE_TTL_MS,
     REMOTE_RULES_URL,
+    REMOTE_RULES_FALLBACK_URL,
     EMBEDDED_FALLBACK_RULES
   } = root.CONSTANTS;
   const LOOPBACK_RULES_URL_PATTERN = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//i;
@@ -55,10 +56,6 @@
     });
   }
 
-  function isContentScriptContext() {
-    return typeof window !== "undefined" && typeof document !== "undefined";
-  }
-
   function isLoopbackRulesUrl() {
     return LOOPBACK_RULES_URL_PATTERN.test(String(REMOTE_RULES_URL || ""));
   }
@@ -80,7 +77,28 @@
       }
     }
 
-    if (isContentScriptContext() && isLoopbackRulesUrl()) {
+    const urlsToTry = [REMOTE_RULES_URL];
+    if (
+      REMOTE_RULES_FALLBACK_URL &&
+      REMOTE_RULES_FALLBACK_URL !== REMOTE_RULES_URL
+    ) {
+      urlsToTry.push(REMOTE_RULES_FALLBACK_URL);
+    }
+
+    for (const url of urlsToTry) {
+      try {
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Rules request failed with status ${response.status}.`);
+        }
+
+        const payload = validateRulesPayload(await response.json());
+        await cacheRules(payload);
+        return payload;
+      } catch {}
+    }
+
+    if (isLoopbackRulesUrl()) {
       try {
         const packaged = await loadPackagedRules();
         await cacheRules(packaged);
@@ -90,27 +108,7 @@
       }
     }
 
-    try {
-      const response = await fetch(REMOTE_RULES_URL, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error(`Rules request failed with status ${response.status}.`);
-      }
-
-      const payload = validateRulesPayload(await response.json());
-      await cacheRules(payload);
-      return payload;
-    } catch (error) {
-      if (isLoopbackRulesUrl()) {
-        try {
-          const packaged = await loadPackagedRules();
-          await cacheRules(packaged);
-          return packaged;
-        } catch {
-          return EMBEDDED_FALLBACK_RULES;
-        }
-      }
-      return EMBEDDED_FALLBACK_RULES;
-    }
+    return EMBEDDED_FALLBACK_RULES;
   }
 
   function scoreVendor(vendor, context) {

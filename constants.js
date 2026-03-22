@@ -6,6 +6,7 @@
       "wismedreview.lovable.app"
     ],
     REMOTE_RULES_URL: "http://127.0.0.1:5500/cloud_rules.sample.json",
+    REMOTE_RULES_FALLBACK_URL: "https://fdalto.github.io/WISMed/cloud_rules.sample.json",
     RULES_CACHE_TTL_MS: 15 * 60 * 1000,
     PORTAL_SCAN_DEBOUNCE_MS: 800,
     URL_CHANGE_POLL_MS: 1200,
@@ -36,7 +37,18 @@
             "[data-cy='dropDownToolsWrapper']",
             "[class*='DropDownToolsWrapper']"
           ],
-          triggerTexts: ["baixar", "download", "export", "dicom", "zip"]
+          triggerTexts: ["baixar", "download", "export", "dicom", "zip"],
+          clickSelectors: [
+            "[data-cy='dropDownToolsWrapper']",
+            "[class*='DropDownToolsWrapper']",
+            "button",
+            "[role='button']"
+          ],
+          dropdownPresenceSelectors: [
+            "[data-cy='dropDownToolsWrapper']",
+            "[class*='DropDownToolsWrapper']",
+            "[aria-haspopup='menu']"
+          ]
         },
         genericDownload: {
           candidateSelectors: [

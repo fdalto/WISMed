@@ -9,9 +9,21 @@ importScripts(
 (function initServiceWorker(globalScope) {
   const root = globalScope.WISMED;
   const { MESSAGE_TYPES, STATUS_COLORS, BADGE_TEXT } = root.CONSTANTS;
+  const TRANSIENT_FLOW_STATUSES = new Set([
+    "download_in_progress",
+    "upload_in_progress",
+    "upload_success",
+    "error"
+  ]);
+  const KEEP_STATUS_WHEN_DISABLED = new Set([
+    "download_in_progress",
+    "upload_in_progress",
+    "upload_success",
+    "error"
+  ]);
 
   function getEffectiveStatus(state) {
-    if (!state.autoModeEnabled) {
+    if (!state.autoModeEnabled && !TRANSIENT_FLOW_STATUSES.has(state.extensionStatus)) {
       return "standby";
     }
     return state.extensionStatus || "tracking";
@@ -171,11 +183,12 @@ importScripts(
           const state = await root.stateManager.getState();
           const payloadValue = message.payload?.enabled;
           const nextValue = typeof payloadValue === "boolean" ? payloadValue : !state.autoModeEnabled;
+          const nextStatus = nextValue
+            ? ((state.uploadUrl && state.uploadToken) ? "link_captured" : "tracking")
+            : (KEEP_STATUS_WHEN_DISABLED.has(state.extensionStatus) ? state.extensionStatus : "standby");
           await root.stateManager.setState({
             autoModeEnabled: nextValue,
-            extensionStatus: nextValue
-              ? ((state.uploadUrl && state.uploadToken) ? "link_captured" : "tracking")
-              : "standby"
+            extensionStatus: nextStatus
           });
           sendResponse({ ok: true, autoModeEnabled: nextValue });
           await syncVisualState();

@@ -184,12 +184,54 @@
 
   <script>
     const LIST_FIELDS = [
-      { id: "preferred", label: "downloadPriority.preferred", path: ["global", "downloadPriority", "preferred"] },
-      { id: "avoid", label: "downloadPriority.avoid", path: ["global", "downloadPriority", "avoid"] },
-      { id: "dropdown-selectors", label: "genericDropdown.triggerSelectors", path: ["global", "genericDropdown", "triggerSelectors"] },
-      { id: "dropdown-texts", label: "genericDropdown.triggerTexts", path: ["global", "genericDropdown", "triggerTexts"] },
-      { id: "download-selectors", label: "genericDownload.candidateSelectors", path: ["global", "genericDownload", "candidateSelectors"] },
-      { id: "download-texts", label: "genericDownload.actionTexts", path: ["global", "genericDownload", "actionTexts"] }
+      {
+        id: "preferred",
+        label: "downloadPriority.preferred",
+        path: ["global", "downloadPriority", "preferred"],
+        help: "Termos que aumentam o score do alvo de download (ex.: dicom, zip, estudo completo)."
+      },
+      {
+        id: "avoid",
+        label: "downloadPriority.avoid",
+        path: ["global", "downloadPriority", "avoid"],
+        help: "Termos que reduzem o score para evitar download errado (ex.: imagem atual, serie atual)."
+      },
+      {
+        id: "dropdown-selectors",
+        label: "genericDropdown.triggerSelectors",
+        path: ["global", "genericDropdown", "triggerSelectors"],
+        help: "Seletores CSS usados para encontrar blocos/botoes que podem abrir menu dropdown de download."
+      },
+      {
+        id: "dropdown-texts",
+        label: "genericDropdown.triggerTexts",
+        path: ["global", "genericDropdown", "triggerTexts"],
+        help: "Palavras esperadas no texto do botao/menu para confirmar que e um menu de baixar/exportar."
+      },
+      {
+        id: "dropdown-click-selectors",
+        label: "genericDropdown.clickSelectors",
+        path: ["global", "genericDropdown", "clickSelectors"],
+        help: "Seletores CSS do alvo real do clique para abrir o dropdown (seta, wrapper interno, botao)."
+      },
+      {
+        id: "dropdown-presence-selectors",
+        label: "genericDropdown.dropdownPresenceSelectors",
+        path: ["global", "genericDropdown", "dropdownPresenceSelectors"],
+        help: "Seletores que indicam que o menu dropdown existe dentro do bloco encontrado."
+      },
+      {
+        id: "download-selectors",
+        label: "genericDownload.candidateSelectors",
+        path: ["global", "genericDownload", "candidateSelectors"],
+        help: "Seletores CSS para listar elementos candidatos de download. A extensao calcula score nesses elementos."
+      },
+      {
+        id: "download-texts",
+        label: "genericDownload.actionTexts",
+        path: ["global", "genericDownload", "actionTexts"],
+        help: "Termos genericos de acao (download/baixar/exportar) que somam pontos no ranking de clique."
+      }
     ];
 
     const nodes = {
@@ -242,6 +284,13 @@
       title.className = "label";
       title.textContent = field.label;
       wrapper.appendChild(title);
+
+      if (field.help) {
+        const hint = document.createElement("p");
+        hint.className = "hint";
+        hint.textContent = field.help;
+        wrapper.appendChild(hint);
+      }
 
       const list = document.createElement("div");
       list.className = "list";

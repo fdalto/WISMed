@@ -11,6 +11,8 @@
       state: item.state || "unknown",
       exists: typeof item.exists === "boolean" ? item.exists : null,
       fileSize: item.fileSize || null,
+      bytesReceived: item.bytesReceived || null,
+      totalBytes: item.totalBytes || null,
       startTime: item.startTime || null,
       endTime: item.endTime || null
     };
@@ -24,6 +26,7 @@
 
     const downloadInfo = normalizeDownloadItem(item);
     await root.stateManager.setState({
+      autoModeEnabled: false,
       extensionStatus: "download_in_progress",
       lastDownloadInfo: downloadInfo,
       lastError: null
@@ -32,17 +35,39 @@
 
   async function handleDownloadChanged(delta) {
     const state = await root.stateManager.getState();
-    if (!state.autoModeEnabled) {
+    const isTrackedDownload = state.lastDownloadInfo?.id === delta.id;
+    if (!state.autoModeEnabled && !isTrackedDownload) {
+      return;
+    }
+
+    if (delta.error?.current) {
+      await root.stateManager.setState({
+        extensionStatus: "error",
+        lastError: `Download failed: ${delta.error.current}`
+      });
+      return;
+    }
+
+    const hasProgressUpdate = Boolean(delta.bytesReceived || delta.totalBytes || delta.state);
+    if (hasProgressUpdate && (!delta.state || delta.state.current !== "complete")) {
+      const baseInfo = isTrackedDownload ? { ...state.lastDownloadInfo } : { id: delta.id };
+      const mergedInfo = {
+        ...baseInfo,
+        id: delta.id,
+        state: delta.state?.current || baseInfo.state || "in_progress",
+        bytesReceived: delta.bytesReceived?.current ?? baseInfo.bytesReceived ?? null,
+        totalBytes: delta.totalBytes?.current ?? baseInfo.totalBytes ?? null
+      };
+
+      await root.stateManager.setState({
+        extensionStatus: "download_in_progress",
+        lastDownloadInfo: mergedInfo,
+        lastError: null
+      });
       return;
     }
 
     if (!delta.state || delta.state.current !== "complete") {
-      if (delta.error?.current) {
-        await root.stateManager.setState({
-          extensionStatus: "error",
-          lastError: `Download failed: ${delta.error.current}`
-        });
-      }
       return;
     }
 
@@ -53,7 +78,7 @@
 
     const downloadInfo = normalizeDownloadItem(item);
     await root.stateManager.setState({
-      extensionStatus: "tracking",
+      extensionStatus: "download_in_progress",
       lastDownloadInfo: downloadInfo
     });
 
