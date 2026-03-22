@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Política de Privacidade - WISMed Upload Bridge</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #4b5563;
+      --line: #e5e7eb;
+      --accent: #0f766e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #eef2ff 0%, var(--bg) 180px);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    main {
+      max-width: 860px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+    article {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 24px;
+    }
+    h1, h2 { line-height: 1.25; margin-top: 0; }
+    h1 { margin-bottom: 8px; font-size: 1.7rem; }
+    h2 { margin-top: 28px; font-size: 1.1rem; color: var(--accent); }
+    p, li { color: var(--muted); }
+    ul { padding-left: 18px; }
+    .meta {
+      margin-top: 0;
+      font-size: 0.95rem;
+      color: #374151;
+    }
+    .note {
+      background: #f0fdfa;
+      border: 1px solid #99f6e4;
+      color: #115e59;
+      padding: 10px 12px;
+      border-radius: 10px;
+    }
+    footer {
+      margin-top: 28px;
+      font-size: 0.9rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>Política de Privacidade</h1>
+      <p class="meta"><strong>Produto:</strong> WISMed Upload Bridge</p>
+      <p class="meta"><strong>Última atualização:</strong> 22 de março de 2026</p>
+
+      <p>
+        Esta Política de Privacidade descreve como a extensão WISMed Upload Bridge lida com dados durante o uso no navegador Google Chrome.
+      </p>
+
+      <h2>1. Dados tratados pela extensão</h2>
+      <p>A extensão pode tratar os seguintes dados necessários ao funcionamento:</p>
+      <ul>
+        <li>URL de upload e token de autenticação fornecidos pela plataforma WISMed.</li>
+        <li>Metadados técnicos do fluxo (estado de execução, versão de regras e informações operacionais de download/upload).</li>
+        <li>Regras de configuração carregadas via arquivo JSON (dados de configuração, não código executável).</li>
+      </ul>
+
+      <h2>2. Finalidade do tratamento</h2>
+      <ul>
+        <li>Detectar o contexto da plataforma/portal em uso.</li>
+        <li>Auxiliar a localizar e disparar o download de exames em portais compatíveis.</li>
+        <li>Encaminhar o exame ao destino configurado no fluxo da WISMed.</li>
+        <li>Manter estado local para continuidade e estabilidade do processo.</li>
+      </ul>
+
+      <h2>3. Compartilhamento de dados</h2>
+      <p>
+        A extensão não vende dados pessoais e não compartilha dados com terceiros para publicidade.
+        O tráfego de dados ocorre apenas conforme necessário ao próprio fluxo funcional da solução
+        (portal de origem, plataforma de destino e serviços de infraestrutura envolvidos no processo técnico).
+      </p>
+
+      <h2>4. Armazenamento local</h2>
+      <p>
+        Dados operacionais podem ser armazenados localmente no navegador por meio da API <code>chrome.storage</code>,
+        exclusivamente para permitir continuidade do fluxo e cache temporário de configurações.
+      </p>
+
+      <h2>5. Permissões do Chrome</h2>
+      <ul>
+        <li><code>storage</code>: persistir estado/configuração local.</li>
+        <li><code>tabs</code>: identificar aba e contexto do fluxo em execução.</li>
+        <li><code>scripting</code>: executar lógica da extensão nas páginas permitidas.</li>
+        <li><code>downloads</code>: acompanhar etapas de download necessárias ao processo.</li>
+        <li><code>webNavigation</code>: reagir a mudanças de navegação e rota.</li>
+        <li><code>host_permissions</code>: operar nos domínios necessários ao funcionamento da extensão.</li>
+      </ul>
+
+      <h2>6. Código remoto</h2>
+      <p class="note">
+        A extensão não baixa nem executa JavaScript remoto. Eventual carregamento remoto ocorre apenas para arquivo JSON de configuração de regras (dados estáticos).
+      </p>
+
+      <h2>7. Retenção e exclusão</h2>
+      <p>
+        Os dados locais permanecem no navegador até que sejam substituídos pelo uso normal da extensão
+        ou removidos pelo usuário ao limpar dados da extensão/desinstalá-la.
+      </p>
+
+      <h2>8. Segurança</h2>
+      <p>
+        São adotadas medidas técnicas razoáveis para reduzir riscos de acesso indevido, dentro das capacidades da plataforma de extensão do navegador.
+      </p>
+
+      <h2>9. Contato</h2>
+      <p>
+        Para dúvidas sobre esta política, solicitações de privacidade ou suporte, utilize o canal oficial do projeto WISMed.
+      </p>
+
+      <footer>
+        Esta política pode ser atualizada periodicamente para refletir mudanças técnicas, operacionais ou regulatórias.
+      </footer>
+    </article>
+  </main>
+</body>
+</html>

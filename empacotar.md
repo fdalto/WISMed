@@ -58,12 +58,16 @@ A Web Store usa ZIP da pasta da extensão (não CRX).
 No terminal:
 ```bash
 cd /Users/vitordalto/Desktop/Programacao/WISMed
-zip -r ../WISMed-extension.zip . \
-  -x "*.git*" \
-  -x "node_modules/*" \
-  -x "*.DS_Store" \
-  -x "*.pem" \
-  -x "*.crx"
+mkdir -p dist
+zip -r dist/WISMed-extension-submissao.zip \
+  manifest.json \
+  service_worker.js \
+  popup.html popup.js popup.css \
+  content_platform.js content_portal.js \
+  rules_engine.js download_manager.js upload_manager.js \
+  constants.js dom_utils.js state_manager.js \
+  cloud_rules.sample.json \
+  correct-icon.svg alert-icon.svg
 ```
 
 ## 5) Atualizar versão
