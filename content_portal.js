@@ -1,6 +1,11 @@
 (function initPortalContentScript(globalScope) {
   const root = globalScope.WISMED;
-  const { MESSAGE_TYPES, PORTAL_SCAN_DEBOUNCE_MS, URL_CHANGE_POLL_MS } = root.CONSTANTS;
+  const {
+    MESSAGE_TYPES,
+    PORTAL_SCAN_DEBOUNCE_MS,
+    URL_CHANGE_POLL_MS,
+    STORAGE_KEYS
+  } = root.CONSTANTS;
   const { collectVisibleText, findByText, highlightElement, applyPulsingHalo, debounce, safeQuery } = root.domUtils;
 
   let lastHref = location.href;
@@ -8,6 +13,26 @@
   let autoDownloadTriggeredHref = null;
   let autoDownloadTriggeredPageHref = null;
   let auroraDownloadMenuOpenedHref = null;
+  let genericPriorityTriggeredPageHref = null;
+  let genericDropdownOpenedPageHref = null;
+  let extensionActive = true;
+  let autoDownloadCooldownUntil = 0;
+
+  const AUTO_DOWNLOAD_COOLDOWN_MS = 4000;
+
+  function refreshActiveState() {
+    chrome.storage.local.get([STORAGE_KEYS.autoModeEnabled], (stored) => {
+      extensionActive = stored[STORAGE_KEYS.autoModeEnabled] !== false;
+    });
+  }
+
+  function isAutoDownloadLocked() {
+    return Date.now() < autoDownloadCooldownUntil;
+  }
+
+  function lockAutoDownload() {
+    autoDownloadCooldownUntil = Date.now() + AUTO_DOWNLOAD_COOLDOWN_MS;
+  }
 
   function isPixeonPatientPage() {
     return /(^|\.)pixeonkorus\.com$/i.test(location.hostname)
@@ -105,6 +130,10 @@
   }
 
   function handleAuroraDownloadFlow() {
+    if (isAutoDownloadLocked()) {
+      return false;
+    }
+
     const explicitLink = findAuroraExplicitDicomLink();
     if (!explicitLink) {
       const trigger = findAuroraDownloadTrigger();
@@ -119,6 +148,7 @@
     const href = explicitLink.href;
     if (href && autoDownloadTriggeredHref !== href) {
       autoDownloadTriggeredHref = href;
+      lockAutoDownload();
       window.location.href = href;
       return true;
     }
@@ -127,6 +157,10 @@
   }
 
   function handleDirectExamDicomDownload() {
+    if (isAutoDownloadLocked()) {
+      return false;
+    }
+
     const explicitLink = document.querySelector("a[download='exam_dicom.zip']");
     if (!explicitLink || !explicitLink.href) {
       return false;
@@ -140,6 +174,7 @@
     ) {
       autoDownloadTriggeredHref = explicitLink.href;
       autoDownloadTriggeredPageHref = location.href;
+      lockAutoDownload();
       window.location.href = explicitLink.href;
       return true;
     }
@@ -148,6 +183,10 @@
   }
 
   function handleAuroraAutoOpenAndDownload() {
+    if (isAutoDownloadLocked()) {
+      return false;
+    }
+
     const explicitLink = document.querySelector("a[download='exam_dicom.zip']");
     if (explicitLink?.href) {
       return handleDirectExamDicomDownload();
@@ -162,6 +201,7 @@
 
     if (auroraDownloadMenuOpenedHref !== location.href) {
       auroraDownloadMenuOpenedHref = location.href;
+      lockAutoDownload();
       trigger.click();
       setTimeout(() => {
         handleDirectExamDicomDownload();
@@ -178,7 +218,167 @@
     return false;
   }
 
+  function normalizeText(value) {
+    return String(value || "").toLowerCase();
+  }
+
+  function getGenericPriorityTerms(rules) {
+    const preferred = rules?.global?.downloadPriority?.preferred;
+    const avoid = rules?.global?.downloadPriority?.avoid;
+    const actionTexts = rules?.global?.genericDownload?.actionTexts;
+    const candidateSelectors = rules?.global?.genericDownload?.candidateSelectors;
+    const minimumScore = Number(rules?.global?.genericDownload?.minimumScore);
+    return {
+      preferred: Array.isArray(preferred) && preferred.length
+        ? preferred
+        : [
+            "dicom",
+            "zip",
+            "exame completo",
+            "estudo completo",
+            "full study",
+            "todas as séries",
+            "todas as series",
+            "todos"
+          ],
+      avoid: Array.isArray(avoid) && avoid.length
+        ? avoid
+        : ["imagem atual", "série atual", "serie atual", "foto", "thumbnail"],
+      actionTexts: Array.isArray(actionTexts) && actionTexts.length
+        ? actionTexts
+        : ["download", "baixar", "export", "dicom", "zip"],
+      candidateSelectors: Array.isArray(candidateSelectors) && candidateSelectors.length
+        ? candidateSelectors
+        : ["a[href]", "button", "[role='button']", "input[type='button']", "input[type='submit']"],
+      minimumScore: Number.isFinite(minimumScore) ? minimumScore : 24
+    };
+  }
+
+  function scoreDownloadCandidate(element, preferredTerms, avoidTerms, actionTexts) {
+    const text = normalizeText(element.innerText || element.textContent);
+    const href = normalizeText(element.getAttribute("href") || "");
+    const download = normalizeText(element.getAttribute("download") || "");
+    const title = normalizeText(element.getAttribute("title") || "");
+    const aria = normalizeText(element.getAttribute("aria-label") || "");
+    const bundle = `${text} ${href} ${download} ${title} ${aria}`;
+
+    let score = 0;
+    for (const term of preferredTerms) {
+      if (bundle.includes(normalizeText(term))) {
+        score += 14;
+      }
+    }
+    for (const term of avoidTerms) {
+      if (bundle.includes(normalizeText(term))) {
+        score -= 11;
+      }
+    }
+
+    for (const term of actionTexts) {
+      if (bundle.includes(normalizeText(term))) {
+        score += 8;
+      }
+    }
+    if (bundle.includes("dicom")) {
+      score += 18;
+    }
+    if (bundle.includes("zip")) {
+      score += 12;
+    }
+    if (bundle.includes("all") || bundle.includes("todas") || bundle.includes("todos")) {
+      score += 7;
+    }
+
+    return { score, bundle };
+  }
+
+  function handleGenericPriorityDownload(rules) {
+    if (isAutoDownloadLocked()) {
+      return false;
+    }
+
+    const { preferred, avoid, actionTexts, candidateSelectors, minimumScore } = getGenericPriorityTerms(rules);
+    const candidates = Array.from(
+      document.querySelectorAll(candidateSelectors.join(","))
+    )
+      .map((element) => ({ element, ...scoreDownloadCandidate(element, preferred, avoid, actionTexts) }))
+      .filter((entry) => entry.score >= minimumScore)
+      .sort((a, b) => b.score - a.score);
+
+    if (!candidates.length) {
+      return false;
+    }
+
+    const best = candidates[0];
+    if (genericPriorityTriggeredPageHref === location.href) {
+      return false;
+    }
+
+    genericPriorityTriggeredPageHref = location.href;
+    lockAutoDownload();
+    applyPulsingHalo(best.element, 6000);
+
+    if (typeof best.element.click === "function") {
+      best.element.click();
+      return true;
+    }
+    return false;
+  }
+
+  function getGenericDropdownConfig(rules) {
+    const triggerSelectors = rules?.global?.genericDropdown?.triggerSelectors;
+    const triggerTexts = rules?.global?.genericDropdown?.triggerTexts;
+    return {
+      triggerSelectors: Array.isArray(triggerSelectors) && triggerSelectors.length
+        ? triggerSelectors
+        : [".downloadToolsItem", "[data-cy='dropDownToolsWrapper']", "[class*='DropDownToolsWrapper']"],
+      triggerTexts: Array.isArray(triggerTexts) && triggerTexts.length
+        ? triggerTexts
+        : ["baixar", "download", "export", "dicom", "zip"]
+    };
+  }
+
+  function findGenericDropdownTrigger(rules) {
+    const { triggerSelectors, triggerTexts } = getGenericDropdownConfig(rules);
+
+    const candidates = Array.from(document.querySelectorAll(triggerSelectors.join(",")));
+    return candidates.find((element) => {
+      const target = element.closest(".downloadToolsItem") || element;
+      const text = normalizeText(target.innerText || target.textContent);
+      const hasDropdown = Boolean(
+        target.querySelector("[data-cy='dropDownToolsWrapper'], [class*='DropDownToolsWrapper']")
+      );
+      return hasDropdown && triggerTexts.some((term) => text.includes(normalizeText(term)));
+    }) || null;
+  }
+
+  function handleGenericDropdownOpen(rules) {
+    if (isAutoDownloadLocked()) {
+      return false;
+    }
+
+    if (genericDropdownOpenedPageHref === location.href) {
+      return false;
+    }
+
+    const dropdownElement = findGenericDropdownTrigger(rules);
+    if (!dropdownElement) {
+      return false;
+    }
+
+    const target = dropdownElement.closest(".downloadToolsItem") || dropdownElement;
+    applyPulsingHalo(target, 6000);
+    genericDropdownOpenedPageHref = location.href;
+    lockAutoDownload();
+    target.click();
+    return true;
+  }
+
   async function analyzePage(reason = "automatic") {
+    if (!extensionActive) {
+      return;
+    }
+
     let rules = null;
     let vendorMatch = null;
     let error = null;
@@ -226,6 +426,14 @@
       handleAuroraDownloadFlow();
     }
 
+    if (handleGenericDropdownOpen(rules)) {
+      return;
+    }
+
+    if (handleGenericPriorityDownload(rules)) {
+      return;
+    }
+
     const fingerprint = JSON.stringify({
       pageUrl: result.pageUrl,
       vendor: result.vendor ? result.vendor.id : null,
@@ -243,6 +451,10 @@
   }
 
   async function executeAction(action) {
+    if (!extensionActive) {
+      throw new Error("Extensão inativa.");
+    }
+
     if (!action || typeof action !== "object" || !action.type) {
       throw new Error("Invalid portal action.");
     }
@@ -358,6 +570,10 @@
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === MESSAGE_TYPES.ANALYZE_CURRENT_TAB) {
+      if (!extensionActive) {
+        sendResponse({ ok: false, error: "Extensão inativa." });
+        return false;
+      }
       analyzePage("manual").then(() => sendResponse({ ok: true }));
       return true;
     }
@@ -373,6 +589,13 @@
   });
 
   const debouncedAnalyze = debounce(() => analyzePage("automatic"), PORTAL_SCAN_DEBOUNCE_MS);
+  refreshActiveState();
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes[STORAGE_KEYS.autoModeEnabled]) {
+      return;
+    }
+    extensionActive = changes[STORAGE_KEYS.autoModeEnabled].newValue !== false;
+  });
   debouncedAnalyze();
 
   const observer = new MutationObserver(() => debouncedAnalyze());
@@ -388,6 +611,8 @@
       autoDownloadTriggeredPageHref = null;
       autoDownloadTriggeredHref = null;
       auroraDownloadMenuOpenedHref = null;
+      genericPriorityTriggeredPageHref = null;
+      genericDropdownOpenedPageHref = null;
       debouncedAnalyze();
     }
   }, URL_CHANGE_POLL_MS);

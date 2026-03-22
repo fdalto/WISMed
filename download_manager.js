@@ -17,6 +17,11 @@
   }
 
   async function handleDownloadCreated(item) {
+    const state = await root.stateManager.getState();
+    if (!state.autoModeEnabled) {
+      return;
+    }
+
     const downloadInfo = normalizeDownloadItem(item);
     await root.stateManager.setState({
       extensionStatus: "download_in_progress",
@@ -26,6 +31,11 @@
   }
 
   async function handleDownloadChanged(delta) {
+    const state = await root.stateManager.getState();
+    if (!state.autoModeEnabled) {
+      return;
+    }
+
     if (!delta.state || delta.state.current !== "complete") {
       if (delta.error?.current) {
         await root.stateManager.setState({
@@ -43,7 +53,7 @@
 
     const downloadInfo = normalizeDownloadItem(item);
     await root.stateManager.setState({
-      extensionStatus: "vendor_detected",
+      extensionStatus: "tracking",
       lastDownloadInfo: downloadInfo
     });
 

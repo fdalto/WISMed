@@ -3,17 +3,52 @@
 
   root.CONSTANTS = {
     COMPANY_HOST_PATTERNS: [
-      "wismedreview.lovable.app",
-      "localhost"
+      "wismedreview.lovable.app"
     ],
-    REMOTE_RULES_URL: "https://fdalto.github.io/WISMed/cloud_rules.sample.json",
+    REMOTE_RULES_URL: "http://127.0.0.1:5500/cloud_rules.sample.json",
     RULES_CACHE_TTL_MS: 15 * 60 * 1000,
     PORTAL_SCAN_DEBOUNCE_MS: 800,
     URL_CHANGE_POLL_MS: 1200,
     EMBEDDED_FALLBACK_RULES: {
-      configVersion: "embedded-2026-03-20",
+      configVersion: "embedded-2026-03-22",
       global: {
-        keywords: ["dicom", "download", "baixar", "zip", "imagens", "export"]
+        capture: {
+          companyHost: "wismedreview.lovable.app",
+          urlSelector: "#data-upload-url",
+          tokenSelector: "#data-upload-token"
+        },
+        keywords: ["dicom", "download", "baixar", "zip", "imagens", "exportar"],
+        downloadPriority: {
+          preferred: [
+            "dicom",
+            "zip",
+            "exame completo",
+            "estudo completo",
+            "full study",
+            "todas as séries",
+            "todas as series"
+          ],
+          avoid: ["imagem atual", "série atual", "serie atual", "foto", "thumbnail"]
+        },
+        genericDropdown: {
+          triggerSelectors: [
+            ".downloadToolsItem",
+            "[data-cy='dropDownToolsWrapper']",
+            "[class*='DropDownToolsWrapper']"
+          ],
+          triggerTexts: ["baixar", "download", "export", "dicom", "zip"]
+        },
+        genericDownload: {
+          candidateSelectors: [
+            "a[href]",
+            "button",
+            "[role='button']",
+            "input[type='button']",
+            "input[type='submit']"
+          ],
+          actionTexts: ["download", "baixar", "export", "dicom", "zip"],
+          minimumScore: 24
+        }
       },
       vendors: [
         {
@@ -38,25 +73,30 @@
       ]
     },
     BADGE_TEXT: {
-      idle: "",
-      ready: "OK",
+      standby: "",
+      tracking: "ON",
+      link_captured: "OK",
       portal_detected: "P",
       vendor_detected: "V",
       download_in_progress: "DL",
       upload_in_progress: "UP",
+      upload_success: "OK",
       error: "ERR"
     },
     STATUS_COLORS: {
-      idle: "#7a7a7a",
-      ready: "#2563eb",
-      portal_detected: "#2563eb",
+      standby: "#7a7a7a",
+      tracking: "#84cc16",
+      link_captured: "#15803d",
+      portal_detected: "#16a34a",
       vendor_detected: "#ca8a04",
       download_in_progress: "#ea580c",
-      upload_in_progress: "#7c3aed",
-      error: "#dc2626"
+      upload_in_progress: "#2563eb",
+      upload_success: "#15803d",
+      error: "#eab308"
     },
     STORAGE_KEYS: {
       uploadUrl: "uploadUrl",
+      uploadToken: "uploadToken",
       platformDetected: "platformDetected",
       rulesVersion: "rulesVersion",
       activeVendor: "activeVendor",
@@ -71,25 +111,29 @@
       currentExamRows: "currentExamRows",
       currentDownloadLinks: "currentDownloadLinks",
       currentTabInfo: "currentTabInfo",
-      pendingUploadContext: "pendingUploadContext"
+      pendingUploadContext: "pendingUploadContext",
+      lastUploadResult: "lastUploadResult"
     },
     DEFAULT_STATE: {
       uploadUrl: null,
+      uploadToken: null,
       platformDetected: false,
       rulesVersion: "unloaded",
       activeVendor: null,
-      extensionStatus: "idle",
+      extensionStatus: "tracking",
       lastError: null,
       lastDownloadInfo: null,
-      autoModeEnabled: false,
+      autoModeEnabled: true,
       debugMode: false,
       portalAnalysis: null,
       currentExamRows: [],
       currentDownloadLinks: [],
       currentTabInfo: null,
-      pendingUploadContext: null
+      pendingUploadContext: null,
+      lastUploadResult: null
     },
     MESSAGE_TYPES: {
+      PLATFORM_UPLOAD_CREDENTIALS_FOUND: "PLATFORM_UPLOAD_CREDENTIALS_FOUND",
       PLATFORM_UPLOAD_URL_FOUND: "PLATFORM_UPLOAD_URL_FOUND",
       PLATFORM_STATUS: "PLATFORM_STATUS",
       PORTAL_ANALYSIS_RESULT: "PORTAL_ANALYSIS_RESULT",

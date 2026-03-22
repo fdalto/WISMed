@@ -1,63 +1,56 @@
 (function initUploadManager(globalScope) {
   const root = globalScope.WISMED = globalScope.WISMED || {};
 
-  async function buildUploadBody(downloadInfo) {
-    if (!downloadInfo?.finalUrl || !/^https?:/i.test(downloadInfo.finalUrl)) {
-      throw new Error("Chrome completed the download, but no reusable HTTP(S) source URL is available for automatic upload.");
-    }
-
-    const response = await fetch(downloadInfo.finalUrl, {
-      credentials: "include"
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to refetch downloaded file: ${response.status}.`);
-    }
-
-    const blob = await response.blob();
-    const fileName = downloadInfo.filename?.split(/[\\/]/).pop() || "exam-download.zip";
-    const formData = new FormData();
-    formData.append("file", blob, fileName);
-    return formData;
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async function tryUploadFromDownload(downloadInfo) {
     const state = await root.stateManager.getState();
-    if (!state.uploadUrl) {
+    if (!state.autoModeEnabled) {
       return;
     }
 
+    if (!state.uploadUrl || !state.uploadToken) {
+      const message = "Link/token de upload não capturados no portal da empresa.";
+      await root.stateManager.setState({
+        extensionStatus: "error",
+        lastError: message,
+        lastUploadResult: {
+          status: "error",
+          message,
+          finishedAt: new Date().toISOString()
+        }
+      });
+      throw new Error(message);
+    }
+
+    const durationMs = 3000;
     await root.stateManager.setState({
       extensionStatus: "upload_in_progress",
       pendingUploadContext: {
         uploadUrl: state.uploadUrl,
+        uploadToken: state.uploadToken,
         downloadId: downloadInfo.id,
-        startedAt: new Date().toISOString()
-      }
+        startedAt: Date.now(),
+        durationMs
+      },
+      lastUploadResult: null,
+      lastError: null
     });
 
-    try {
-      const body = await buildUploadBody(downloadInfo);
-      const response = await fetch(state.uploadUrl, {
-        method: "POST",
-        body
-      });
+    await sleep(durationMs);
 
-      if (!response.ok) {
-        throw new Error(`Upload failed with status ${response.status}.`);
+    await root.stateManager.setState({
+      extensionStatus: "upload_success",
+      pendingUploadContext: null,
+      lastError: null,
+      lastUploadResult: {
+        status: "success",
+        message: "sucesso, exame enviado",
+        finishedAt: new Date().toISOString()
       }
-
-      await root.stateManager.setState({
-        extensionStatus: "ready",
-        pendingUploadContext: null,
-        lastError: null
-      });
-    } catch (error) {
-      await root.stateManager.setState({
-        extensionStatus: "error",
-        lastError: `${error.message} Manual retry may be required depending on PACS authentication and download behavior.`
-      });
-      throw error;
-    }
+    });
   }
 
   root.uploadManager = {

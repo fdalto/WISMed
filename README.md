@@ -1,170 +1,108 @@
 # WISMed Upload Bridge
 
-Extensao Chrome em Manifest V3 para capturar um `uploadUrl` no portal da empresa, reconhecer portais/PACS com base em regras remotas e orientar ou automatizar o fluxo de download do exame e envio posterior.
+Extensao Chrome (Manifest V3) para:
 
-## Visao geral do projeto
+- capturar `uploadUrl` e `uploadToken` no portal da empresa (`wismedreview.lovable.app`)
+- rastrear PACS/viewers em qualquer dominio
+- executar heuristicas genericas de download DICOM
+- simular upload apos o download finalizar (3 segundos)
 
-O projeto foi estruturado para separar claramente:
+## Fluxo atual simplificado
 
-- captura de `uploadUrl` no dominio da empresa
-- analise de portais/PACS baseada em DOM, hostname e regras JSON remotas
-- orquestracao de estado via `chrome.storage.local`
-- monitoramento de downloads via `chrome.downloads`
-- tentativa de upload automatico quando houver URL HTTP(S) reutilizavel
+1. A extensao inicia **ativa** por padrao.
+2. No portal da empresa, captura:
+   - `#data-upload-url`
+   - `#data-upload-token`
+3. Em PACS/viewers, tenta:
+   - abrir dropdown de download (quando existir)
+   - priorizar opcoes de DICOM completo/ZIP por score de termos
+   - aplicar cooldown de 4s para evitar multi-cliques repetidos
+4. Quando o download conclui, executa simulacao de upload por 3s e marca sucesso.
 
-## Arquitetura dos arquivos
+## Estados visuais no popup
 
-- `manifest.json`: configuracao MV3, permissoes, popup, service worker e content scripts
-- `service_worker.js`: coordenacao central, badge, estado global e acoes do popup
-- `constants.js`: dominios, URL das regras remotas, chaves de storage e mapa de estados visuais
-- `state_manager.js`: leitura, escrita e limpeza do estado salvo
-- `content_platform.js`: captura do `uploadUrl` no site da empresa
-- `content_portal.js`: analise de PACS/portal, observacao de SPA e execucao de acoes
-- `rules_engine.js`: download, cache e avaliacao das regras remotas
-- `dom_utils.js`: utilitarios de DOM, texto visivel, debounce e destaque visual
-- `download_manager.js`: observacao do lifecycle dos downloads
-- `upload_manager.js`: tentativa de upload automatico a partir de uma URL de download reaproveitavel
-- `popup.html`, `popup.css`, `popup.js`: interface de status e acoes manuais
+Layout com 2 blocos + rodape:
 
-## Como carregar no Chrome em modo desenvolvedor
+- Bloco 1: captura de link/token
+- Bloco 2: download + envio
+- Rodape: chave `Extensao ativa/inativa`
 
-1. Abra `chrome://extensions`.
-2. Ative `Developer mode`.
-3. Clique em `Load unpacked`.
-4. Selecione a pasta [D:\WISMed](/D:/WISMed).
+Cores:
 
-## Como configurar dominio da empresa
+- standby/inativa: cinza
+- rastreando: verde claro
+- sucesso (link/token capturados ou envio concluido): verde
+- erro: amarelo pastel + icone de alerta + titulo fixo `Falha do envio`
 
-Ajuste [constants.js](/D:/WISMed/constants.js):
+## Arquivos principais
 
-- `COMPANY_HOST_PATTERNS`: hosts do portal da empresa. O projeto ja vem configurado com `wismedreview.lovable.app`
-- `REMOTE_RULES_URL`: endpoint HTTPS do JSON remoto. O projeto ja vem apontando para `https://fdalto.github.io/WISMed/cloud_rules.sample.json`
-- tempos de cache e debounce conforme a necessidade do ambiente
+- `manifest.json`: configuracao MV3 e content scripts
+- `constants.js`: constantes, estados, chaves de storage e fallback de regras
+- `service_worker.js`: coordenacao central, badge, mensagens e toggle global ativa/inativa
+- `state_manager.js`: leitura/escrita em `chrome.storage.local`
+- `content_platform.js`: captura de `uploadUrl/uploadToken` no dominio da empresa
+- `content_portal.js`: analise de PACS/viewers, dropdown generico, score de download e cooldown
+- `rules_engine.js`: carrega regras (remotas, empacotadas ou fallback embedado)
+- `download_manager.js`: monitora download via `chrome.downloads`
+- `upload_manager.js`: simulacao de upload (3s) e estados de sucesso/erro
+- `popup.html`, `popup.css`, `popup.js`: interface simplificada em dois blocos
+- `cloud_rules.sample.json`: regras locais de desenvolvimento
+- `rules_editor.html`: editor visual para evoluir termos e gerar novo JSON
 
-Se os PACS-alvo forem conhecidos, reduza os padroes em [manifest.json](/D:/WISMed/manifest.json) para remover `http://*/*` e `https://*/*` antes de distribuir a extensao.
+## Regras (cloud_rules)
 
-## Exemplo de JSON remoto
+URL de desenvolvimento em `constants.js`:
 
-```json
-{
-  "configVersion": "2026-03-20",
-  "global": {
-    "keywords": ["dicom", "download", "baixar", "zip", "imagens", "export"]
-  },
-  "vendors": [
-    {
-      "id": "animate",
-      "name": "Animate",
-      "priority": 100,
-      "detect": {
-        "hostnameContains": ["animate"],
-        "pathContains": ["/viewer", "/exam"],
-        "textContainsAny": ["animate", "dicom"],
-        "selectorExists": ["#btnDownloadExam"],
-        "scriptSrcContains": ["animate"]
-      },
-      "actions": [
-        {
-          "type": "click_selector",
-          "selector": "#btnDownloadExam",
-          "waitMs": 1000
-        }
-      ],
-      "manualHint": "Fornecedor Animate detectado"
-    }
-  ]
-}
-```
+- `REMOTE_RULES_URL`: `http://127.0.0.1:5500/cloud_rules.sample.json`
 
-O JSON remoto deve conter apenas dados. Nenhum codigo remoto e executado.
+Blocos importantes no JSON:
 
-## Como testar a captura do upload URL
+- `global.downloadPriority.preferred`
+- `global.downloadPriority.avoid`
+- `global.genericDropdown.triggerSelectors`
+- `global.genericDropdown.triggerTexts`
+- `global.genericDownload.candidateSelectors`
+- `global.genericDownload.actionTexts`
+- `global.genericDownload.minimumScore`
+- `vendors[]` para regras especificas por fornecedor
 
-Suportado por padrao:
+## CORS/PNA em ambiente local
 
-- `#upload-config[data-upload-url]`
-- `#ext-config[type="application/json"]` com `uploadUrl`
-- elementos genericos com `data-upload-url`
-- texto visivel que contenha um caminho `/upload/...`
+Quando a pagina PACS roda em `http://...`, o browser pode bloquear fetch para `127.0.0.1` em content script (Private Network Access).
 
-Ao encontrar um valor valido:
+Para contornar:
 
-- o `service_worker` salva o `uploadUrl`
-- o estado muda para `ready`
-- o badge fica verde com `OK`
+- o `rules_engine.js` tenta carregar `cloud_rules.sample.json` empacotado (`chrome.runtime.getURL`) quando detectar loopback
+- se falhar, usa fallback embedado em `constants.js`
 
-## Como testar a analise do portal/PACS
+## Como carregar no Chrome
 
-1. Abra um portal/PACS em outra aba.
-2. Abra o popup.
-3. Clique em `Recarregar regras` para carregar o JSON remoto.
-4. Clique em `Analisar pagina atual`.
-5. Se um fornecedor for reconhecido, clique em `Executar acao detectada`.
+1. Abra `chrome://extensions`
+2. Ative `Developer mode`
+3. Clique em `Load unpacked`
+4. Selecione a pasta do projeto
 
-Estrategias ja implementadas:
+## Como usar o Rules Editor
 
-- `click_selector`
-- `click_text`
-- `wait_for_selector`
-- `open_menu_then_click`
-- `highlight_selector`
-- `manual_only`
-- `read_attribute`
-- `scan_iframes`
-- `multi_step_sequence`
+1. Abra `rules_editor.html` via servidor local (ex.: Live Server)
+2. Clique em `Carregar cloud_rules.sample.json`
+3. Edite termos/seletores
+4. Clique em `Gerar JSON` e depois `Baixar cloud_rules.sample.json`
 
-## Armazenamento em chrome.storage.local
+## Armazenamento (chrome.storage.local)
 
-Persistidos:
+Chaves principais:
 
 - `uploadUrl`
-- `platformDetected`
-- `rulesVersion`
-- `activeVendor`
+- `uploadToken`
+- `autoModeEnabled`
 - `extensionStatus`
 - `lastError`
 - `lastDownloadInfo`
-- `autoModeEnabled`
-- `debugMode`
-- `portalAnalysis`
-- `currentTabInfo`
 - `pendingUploadContext`
+- `lastUploadResult`
+- `rulesCache`, `rulesVersion`, `lastRulesSyncAt`
 
-## Permissoes do manifesto
+## Observacao
 
-- `storage`: persistencia do estado da extensao
-- `tabs`: descobrir e contatar a aba ativa
-- `scripting`: reservado para evolucao de injecoes programaticas
-- `downloads`: acompanhar inicio e fim dos downloads
-- `webNavigation`: base para evolucoes ligadas a navegacao/SPA
-- `host_permissions`: acesso ao dominio da empresa, ao JSON remoto e aos PACS analisados
-
-## Como depurar
-
-O estado completo fica centralizado em `chrome.storage.local`. O popup expoe:
-
-- status atual
-- upload URL mascarado
-- dominio atual
-- fornecedor detectado
-- versao das regras
-- ultimo download
-- ultimo erro
-
-Para depurar o service worker, use a tela da extensao em `chrome://extensions` e abra `service worker`.
-
-## Limitacoes tecnicas conhecidas
-
-- A API `chrome.downloads` nao entrega diretamente o conteudo binario do arquivo ja salvo no disco.
-- Por isso, o upload automatico implementado em [upload_manager.js](/D:/WISMed/upload_manager.js) tenta refazer o download pela `finalUrl` HTTP(S).
-- Isso so funciona quando o navegador ainda consegue acessar a URL original com a autenticacao necessaria.
-- Se o portal gerar um arquivo apenas em contexto local, blob interno ou fluxo nao reaproveitavel, a extensao entrara em erro com orientacao implicita para retry/manual.
-- Para um fluxo totalmente robusto, o ideal e capturar uma URL de export valida antes do download final ou integrar com uma API controlada pelo proprio PACS/fornecedor.
-
-## Proximos passos para publicacao na Chrome Web Store
-
-1. Reduzir `host_permissions` para dominios exatos.
-2. Substituir `REMOTE_RULES_URL` por um endpoint real com versionamento.
-3. Adicionar icones, screenshots e politica de privacidade.
-4. Validar o comportamento em PACS reais e refinar os detectores por fornecedor.
-5. Revisar o fluxo de upload de acordo com o backend real da empresa.
+O envio atual esta em modo simulado. Integracao real com Supabase/backend sera implementada depois.

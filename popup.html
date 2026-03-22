@@ -8,45 +8,35 @@
 </head>
 <body>
   <main class="popup">
-    <header class="popup__header">
-      <div>
-        <p class="eyebrow">WISMed</p>
-        <h1>Upload Bridge</h1>
+    <section id="link-card" class="status-card status-card--standby">
+      <div class="status-card__head">
+        <p class="status-card__eyebrow">Captura do Link</p>
+        <img id="link-icon" class="status-card__icon" src="correct-icon.svg" alt="">
       </div>
-      <span id="status-pill" class="status-pill">idle</span>
-    </header>
-
-    <section class="panel">
-      <p class="label">Upload URL</p>
-      <p id="upload-url">not set</p>
-      <p class="label">Domínio atual</p>
-      <p id="current-domain">unknown</p>
-      <p class="label">Fornecedor detectado</p>
-      <p id="vendor-name">none</p>
+      <h1 id="link-title" class="status-card__title">Standby</h1>
+      <p id="link-detail" class="status-card__detail">Extensão inativa.</p>
+      <p id="link-meta" class="status-card__meta"></p>
     </section>
 
-    <section class="panel">
-      <p class="label">Versão das regras</p>
-      <p id="rules-version">unloaded</p>
-      <p class="label">Último download</p>
-      <p id="last-download">none</p>
-      <p class="label">Último erro</p>
-      <p id="last-error">none</p>
+    <section id="upload-card" class="status-card status-card--standby">
+      <div class="status-card__head">
+        <p class="status-card__eyebrow">Captura da Imagem</p>
+        <img id="upload-icon" class="status-card__icon" src="correct-icon.svg" alt="">
+      </div>
+      <h2 id="upload-title" class="status-card__title">Standby</h2>
+      <p id="upload-detail" class="status-card__detail">Extensão inativa.</p>
+      <div class="progress">
+        <div id="upload-progress-fill" class="progress__fill"></div>
+      </div>
+      <p id="upload-error" class="status-card__error"></p>
     </section>
 
-    <section class="panel toggles">
-      <label>
-        <span>Automação</span>
+    <footer class="footer">
+      <label class="switch-row">
+        <span id="active-label">Extensão ativa</span>
         <input id="auto-mode" type="checkbox">
       </label>
-    </section>
-
-    <section class="actions">
-      <button id="reload-rules">Recarregar regras</button>
-      <button id="analyze-tab">Analisar página atual</button>
-      <button id="run-action">Executar ação detectada</button>
-      <button id="clear-state" class="button--ghost">Limpar estado</button>
-    </section>
+    </footer>
   </main>
   <script src="constants.js"></script>
   <script src="popup.js"></script>

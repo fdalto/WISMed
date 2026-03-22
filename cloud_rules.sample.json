@@ -1,72 +1,91 @@
 {
-  "configVersion": "2026-03-21",
+  "configVersion": "2026-03-22",
   "global": {
+    "capture": {
+      "companyHost": "wismedreview.lovable.app",
+      "urlSelector": "#data-upload-url",
+      "tokenSelector": "#data-upload-token"
+    },
     "keywords": [
-      "dicom",
       "download",
       "baixar",
-      "zip",
-      "imagens",
-      "export",
-      "estudo"
-    ]
+      "dicom",
+      "exportar"
+    ],
+    "downloadPriority": {
+      "preferred": [
+        "dicom",
+        "zip",
+        "exame completo",
+        "estudo completo",
+        "full study",
+        "todas as séries",
+        "todas as series",
+        "todos"
+      ],
+      "avoid": [
+        "imagem atual",
+        "série atual",
+        "serie atual",
+        "foto",
+        "thumbnail"
+      ]
+    },
+    "genericDropdown": {
+      "triggerSelectors": [
+        ".downloadToolsItem",
+        "[data-cy='dropDownToolsWrapper']",
+        "[class*='DropDownToolsWrapper']",
+        "[aria-haspopup='menu']",
+        "[aria-expanded]"
+      ],
+      "triggerTexts": [
+        "baixar",
+        "download",
+        "exportar",
+        "dicom",
+        "zip",
+        "pacote",
+        "arquivo"
+      ]
+    },
+    "genericDownload": {
+      "candidateSelectors": [
+        "a[href]",
+        "button",
+        "[role='button']",
+        "input[type='button']",
+        "input[type='submit']",
+        "[data-cy*='download']"
+      ],
+      "actionTexts": [
+        "download",
+        "baixar",
+        "exportar",
+        "dicom",
+        "zip",
+        "estudo completo",
+        "exame completo"
+      ],
+      "minimumScore": 24
+    }
   },
   "vendors": [
     {
-      "id": "aurora-pacs",
-      "name": "Aurora PACS",
-      "priority": 140,
-      "detect": {
-        "hostnameContains": [
-          "pacs.cedirp.com.br"
-        ],
-        "pathContains": [
-          "/resource/"
-        ],
-        "textContainsAny": [
-          "Baixar",
-          "Galeria",
-          "Informações do Paciente",
-          "MAMOGRAFIA DIGITAL BILATERAL"
-        ],
-        "selectorExists": [
-          ".downloadToolsItem",
-          "a[download='exam_dicom.zip']",
-          ".styles__DropDownToolsWrapper-sc-152ee91-2"
-        ],
-        "scriptSrcContains": [
-          "main."
-        ]
-      },
-      "actions": [
-        {
-          "type": "pulse_halo_selector",
-          "selector": ".downloadToolsItem, a[download='exam_dicom.zip']",
-          "durationMs": 10000
-        }
-      ],
-      "manualHint": "Link explicito de download DICOM encontrado. O download pode ser iniciado automaticamente."
-    },
-    {
       "id": "pixeonkorus",
       "name": "Pixeon Korus",
-      "priority": 120,
+      "priority": 150,
       "detect": {
         "hostnameContains": [
-          "pixeonkorus",
-          "pixeon"
+          "pixeonkorus"
         ],
-        "pathContains": [
-          "/Paciente.aspx"
-        ],
+        "pathContains": [],
         "textContainsAny": [
-          "Resultados On-Line",
-          "Exame de Imagem",
-          "PACIENTE:"
+          "pixeon",
+          "exame de imagem"
         ],
         "selectorExists": [
           "img[alt='Pixeon']",
-          "#ctl00_ContentPlaceHolderConteudo_GV_Pacientes",
           "input[title='Exame de Imagem']"
         ],
         "scriptSrcContains": []
@@ -78,21 +97,15 @@
           "durationMs": 10000
         }
       ],
-      "manualHint": "Tabela de exames encontrada. Use o botao de imagem destacado em vermelho."
+      "manualHint": "Fornecedor Pixeon detectado. Selecione o exame e baixe o DICOM completo."
     },
     {
       "id": "generic-download",
       "name": "Generic Download Portal",
       "priority": 40,
       "detect": {
-        "hostnameContains": [
-          "localhost",
-          "127.0.0.1"
-        ],
-        "pathContains": [
-          "/portal",
-          "/viewer"
-        ],
+        "hostnameContains": [],
+        "pathContains": [],
         "textContainsAny": [
           "download",
           "baixar",
@@ -100,79 +113,26 @@
           "exportar"
         ],
         "selectorExists": [
-          "#downloadExam",
-          "button[data-test='download-exam']",
-          "a[download]"
+          "a[href*='dicom']",
+          "a[href*='zip']",
+          "button",
+          "[download]"
         ],
         "scriptSrcContains": []
       },
       "actions": [
         {
-          "type": "highlight_selector",
-          "selector": "#downloadExam"
-        },
-        {
-          "type": "click_selector",
-          "selector": "#downloadExam",
-          "waitMs": 1200
+          "type": "click_text",
+          "texts": [
+            "download dicom",
+            "baixar dicom",
+            "download",
+            "baixar",
+            "exportar"
+          ]
         }
       ],
-      "manualHint": "Portal generico com botao de download identificado."
-    },
-    {
-      "id": "animate",
-      "name": "Animate",
-      "priority": 100,
-      "detect": {
-        "hostnameContains": [
-          "animate"
-        ],
-        "pathContains": [
-          "/viewer",
-          "/exam"
-        ],
-        "textContainsAny": [
-          "animate",
-          "dicom"
-        ],
-        "selectorExists": [
-          "#btnDownloadExam"
-        ],
-        "scriptSrcContains": [
-          "animate"
-        ]
-      },
-      "actions": [
-        {
-          "type": "click_selector",
-          "selector": "#btnDownloadExam",
-          "waitMs": 1000
-        }
-      ],
-      "manualHint": "Fornecedor Animate detectado."
-    },
-    {
-      "id": "manual-review",
-      "name": "Manual Review Portal",
-      "priority": 15,
-      "detect": {
-        "hostnameContains": [],
-        "pathContains": [],
-        "textContainsAny": [
-          "imagens",
-          "download do exame",
-          "exportar estudo"
-        ],
-        "selectorExists": [],
-        "scriptSrcContains": []
-      },
-      "actions": [
-        {
-          "type": "manual_only",
-          "message": "Fornecedor parcialmente reconhecido. Revise o menu de exportacao."
-        }
-      ],
-      "manualHint": "Ha sinais de portal conhecido, mas a acao ainda depende de revisao manual."
+      "manualHint": "Portal genérico detectado. A extensão prioriza links de exame completo."
     }
   ]
 }

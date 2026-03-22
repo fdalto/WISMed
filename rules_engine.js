@@ -6,6 +6,7 @@
     REMOTE_RULES_URL,
     EMBEDDED_FALLBACK_RULES
   } = root.CONSTANTS;
+  const LOOPBACK_RULES_URL_PATTERN = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//i;
 
   function normalizeText(value) {
     return String(value || "").toLowerCase();
@@ -46,11 +47,46 @@
     return stored[STORAGE_KEYS.rulesCache];
   }
 
+  async function cacheRules(payload) {
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.rulesCache]: payload,
+      [STORAGE_KEYS.lastRulesSyncAt]: Date.now(),
+      [STORAGE_KEYS.rulesVersion]: payload.configVersion
+    });
+  }
+
+  function isContentScriptContext() {
+    return typeof window !== "undefined" && typeof document !== "undefined";
+  }
+
+  function isLoopbackRulesUrl() {
+    return LOOPBACK_RULES_URL_PATTERN.test(String(REMOTE_RULES_URL || ""));
+  }
+
+  async function loadPackagedRules() {
+    const packagedUrl = chrome.runtime.getURL("cloud_rules.sample.json");
+    const response = await fetch(packagedUrl, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Packaged rules request failed with status ${response.status}.`);
+    }
+    return validateRulesPayload(await response.json());
+  }
+
   async function loadRemoteRules(forceReload) {
     if (!forceReload) {
       const cached = await getCachedRules();
       if (cached) {
         return cached;
+      }
+    }
+
+    if (isContentScriptContext() && isLoopbackRulesUrl()) {
+      try {
+        const packaged = await loadPackagedRules();
+        await cacheRules(packaged);
+        return packaged;
+      } catch {
+        return EMBEDDED_FALLBACK_RULES;
       }
     }
 
@@ -61,17 +97,19 @@
       }
 
       const payload = validateRulesPayload(await response.json());
-      await chrome.storage.local.set({
-        [STORAGE_KEYS.rulesCache]: payload,
-        [STORAGE_KEYS.lastRulesSyncAt]: Date.now(),
-        [STORAGE_KEYS.rulesVersion]: payload.configVersion
-      });
+      await cacheRules(payload);
       return payload;
     } catch (error) {
-      if (REMOTE_RULES_URL.includes("example.com")) {
-        return EMBEDDED_FALLBACK_RULES;
+      if (isLoopbackRulesUrl()) {
+        try {
+          const packaged = await loadPackagedRules();
+          await cacheRules(packaged);
+          return packaged;
+        } catch {
+          return EMBEDDED_FALLBACK_RULES;
+        }
       }
-      throw error;
+      return EMBEDDED_FALLBACK_RULES;
     }
   }
 

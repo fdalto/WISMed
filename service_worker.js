@@ -10,9 +10,16 @@ importScripts(
   const root = globalScope.WISMED;
   const { MESSAGE_TYPES, STATUS_COLORS, BADGE_TEXT } = root.CONSTANTS;
 
+  function getEffectiveStatus(state) {
+    if (!state.autoModeEnabled) {
+      return "standby";
+    }
+    return state.extensionStatus || "tracking";
+  }
+
   async function updateBadge(status) {
     await chrome.action.setBadgeBackgroundColor({
-      color: STATUS_COLORS[status] || STATUS_COLORS.idle
+      color: STATUS_COLORS[status] || STATUS_COLORS.standby
     });
     await chrome.action.setBadgeText({
       text: BADGE_TEXT[status] || ""
@@ -21,28 +28,44 @@ importScripts(
 
   async function syncVisualState() {
     const state = await root.stateManager.getState();
-    await updateBadge(state.extensionStatus);
+    await updateBadge(getEffectiveStatus(state));
   }
 
   async function handlePlatformUpload(payload) {
+    const state = await root.stateManager.getState();
+    if (!state.autoModeEnabled) {
+      return;
+    }
+
     await root.stateManager.setState({
       uploadUrl: payload.uploadUrl,
+      uploadToken: payload.uploadToken || null,
       platformDetected: true,
-      extensionStatus: "ready",
+      extensionStatus: "link_captured",
       lastError: null
     });
     await syncVisualState();
   }
 
   async function handlePlatformStatus(payload) {
+    const state = await root.stateManager.getState();
+    if (!state.autoModeEnabled) {
+      return;
+    }
+
     await root.stateManager.setState({
       platformDetected: payload.platformDetected,
-      extensionStatus: payload.uploadUrl ? "ready" : "idle"
+      extensionStatus: payload.uploadUrl && payload.uploadToken ? "link_captured" : "tracking"
     });
     await syncVisualState();
   }
 
   async function handlePortalAnalysis(payload) {
+    const state = await root.stateManager.getState();
+    if (!state.autoModeEnabled) {
+      return;
+    }
+
     const partialState = {
       portalAnalysis: payload,
       currentTabInfo: {
@@ -58,7 +81,7 @@ importScripts(
         ? "error"
         : payload.vendor
           ? "vendor_detected"
-          : "portal_detected",
+          : "tracking",
       activeVendor: payload.vendor
         ? {
             id: payload.vendor.id,
@@ -77,6 +100,11 @@ importScripts(
   }
 
   async function sendMessageToActiveTab(message) {
+    const state = await root.stateManager.getState();
+    if (!state.autoModeEnabled) {
+      throw new Error("Extensão inativa. Ative para rastrear e executar ações.");
+    }
+
     const tab = await getActiveTab();
     if (!tab?.id) {
       throw new Error("No active tab found.");
@@ -102,6 +130,7 @@ importScripts(
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     (async () => {
       switch (message?.type) {
+        case MESSAGE_TYPES.PLATFORM_UPLOAD_CREDENTIALS_FOUND:
         case MESSAGE_TYPES.PLATFORM_UPLOAD_URL_FOUND:
           await handlePlatformUpload(message.payload);
           sendResponse({ ok: true });
@@ -127,15 +156,29 @@ importScripts(
           return;
         }
         case MESSAGE_TYPES.CLEAR_STATE:
-          await root.stateManager.clearState();
+          {
+            const state = await root.stateManager.getState();
+            await root.stateManager.clearState();
+            await root.stateManager.setState({
+              autoModeEnabled: state.autoModeEnabled,
+              extensionStatus: state.autoModeEnabled ? "tracking" : "standby"
+            });
+          }
           await syncVisualState();
           sendResponse({ ok: true });
           return;
         case MESSAGE_TYPES.TOGGLE_AUTO_MODE: {
           const state = await root.stateManager.getState();
-          const nextValue = !state.autoModeEnabled;
-          await root.stateManager.setState({ autoModeEnabled: nextValue });
+          const payloadValue = message.payload?.enabled;
+          const nextValue = typeof payloadValue === "boolean" ? payloadValue : !state.autoModeEnabled;
+          await root.stateManager.setState({
+            autoModeEnabled: nextValue,
+            extensionStatus: nextValue
+              ? ((state.uploadUrl && state.uploadToken) ? "link_captured" : "tracking")
+              : "standby"
+          });
           sendResponse({ ok: true, autoModeEnabled: nextValue });
+          await syncVisualState();
           return;
         }
         case MESSAGE_TYPES.ANALYZE_CURRENT_TAB:
